@@ -1,0 +1,389 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Comic Sans MS', sans-serif;
+    min-height: 100vh;
+    padding: 10px;
+    background: #f5f7f5;
+}
+
+/* HEADER */
+.header {
+    background: #fff;
+    border: 3px solid #1a7a4a;
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 15px;
+    box-shadow: 4px 4px 0px #0d5c34;
+    position: relative;
+    overflow: hidden;
+}
+
+.video-container {
+    width: 100%;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border-radius: 8px;
+    border: 2px solid #1a7a4a;
+}
+
+.video-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.comic-bubble {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: #1a7a4a;
+    color: #fff;
+    font-weight: 900;
+    padding: 4px 12px;
+    border: 2px solid #0d5c34;
+    border-radius: 10px;
+    box-shadow: 2px 2px 0px #0d5c34;
+    font-size: 11px;
+    z-index: 20;
+}
+
+/* BANNER */
+.app-banner-wrapper {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.app-banner {
+    background: #fff;
+    border: 3px solid #1a7a4a;
+    border-radius: 20px;
+    padding: 6px 20px;
+    box-shadow: 3px 3px 0px #0d5c34;
+    display: inline-block;
+}
+
+.app-banner .app-name {
+    font-size: 16px;
+    font-weight: 900;
+    color: #1a7a4a;
+}
+
+.app-banner .app-sub {
+    font-size: 10px;
+    color: #666;
+    margin-left: 4px;
+}
+
+/* MENU LIST */
+.menu-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px; /* Jarak antar menu diperlebar sedikit */
+}
+
+.menu-item {
+    background: #fff;
+    border: 2px solid #1a7a4a;
+    border-radius: 12px;
+    padding: 10px 12px;
+    box-shadow: 3px 3px 0px #0d5c34;
+    display: flex;
+    flex-direction: row; /* Diubah agar layout menyamping dan rapi */
+    align-items: center;
+    justify-content: space-between;
+    min-height: 75px;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.menu-item:active {
+    transform: translateY(2px);
+    box-shadow: 1px 1px 0px #0d5c34;
+}
+
+/* Booster & Debug sections span full width */
+.menu-item.full-width {
+    grid-column: 1 / -1;
+    min-height: 45px;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px;
+}
+
+.menu-info {
+    display: flex;
+    flex-direction: column;
+    text-align: left; /* Teks diratakan ke kiri */
+    gap: 2px;
+}
+
+.menu-title {
+    font-size: 12px;
+    font-weight: 900;
+    color: #222;
+}
+
+.menu-desc {
+    font-size: 9px;
+    color: #7f8c8d;
+    font-weight: bold;
+}
+
+.menu-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px; /* Memberi jarak antara status dan tombol toggle */
+}
+
+.menu-status {
+    font-size: 9px;
+    font-weight: 900;
+    padding: 2px 8px;
+    border-radius: 10px;
+    border: 1px solid #000;
+    text-align: center;
+}
+
+.menu-status.off { background: #e74c3c; color: #fff; }
+.menu-status.on { background: #2ecc71; color: #fff; }
+.menu-status.scan { background: #3498db; color: #fff; }
+
+/* PERBAIKAN SWITCH / TOGGLE BUTTON */
+.switch {
+    position: relative;
+    display: inline-block; /* Ini kunci agar switch-nya muncul */
+    width: 38px;
+    height: 22px;
+}
+
+.switch input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0; 
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: #bdc3c7;
+    border-radius: 20px;
+    border: 2px solid #2c3e50;
+    transition: 0.3s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background: #fff;
+    border-radius: 50%;
+    border: 2px solid #2c3e50;
+    transition: 0.3s;
+}
+
+input:checked + .slider { background: #1a7a4a; }
+input:checked + .slider:before { transform: translateX(16px); }
+
+/* GAME SECTION */
+.game-section-wrapper { margin-top: 20px; }
+
+.game-section-header {
+    background: #fff;
+    border: 2px solid #1a7a4a;
+    border-radius: 12px 12px 0 0;
+    padding: 8px 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: none;
+}
+
+.game-section-title { font-size: 13px; font-weight: 900; }
+.title-badge {
+    background: #1a7a4a;
+    color: #fff;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 5px;
+}
+
+.game-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px;
+    background: #fff;
+    border: 2px solid #1a7a4a;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 3px 3px 0px #0d5c34;
+}
+
+.game-card {
+    border: 2px solid #000;
+    border-radius: 10px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    background: #fdfdfd;
+}
+
+.game-icon-wrapper {
+    width: 42px;
+    height: 42px;
+    border: 2px solid #000;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.game-icon-wrapper img { width: 100%; height: 100%; object-fit: cover;}
+.game-card .game-name { font-size: 10px; font-weight: 900; margin-bottom: 6px; text-align: center;}
+
+.game-actions { display: flex; gap: 6px; width: 100%; justify-content: center;}
+.btn-play {
+    background: #2ecc71;
+    color: #fff;
+    border: 2px solid #000;
+    border-radius: 10px;
+    font-size: 9px;
+    padding: 4px 12px;
+    font-weight: 900;
+    flex-grow: 1;
+}
+
+.btn-remove {
+    background: #e74c3c;
+    color: #fff;
+    border: 2px solid #000;
+    border-radius: 8px;
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+/* START BUTTON */
+.btn-start {
+    margin-top: 15px;
+    width: 100%;
+    padding: 12px;
+    border: 3px solid #000;
+    border-radius: 20px;
+    background: #1a7a4a;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 900;
+    box-shadow: 4px 4px 0px #0d5c34;
+    transition: 0.1s;
+}
+
+.btn-start:active {
+    transform: translateY(3px);
+    box-shadow: 1px 1px 0px #0d5c34;
+}
+
+/* MODAL OVERLAY (ADD GAME) */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 3000;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: #fff;
+    width: 90%;
+    max-height: 80%;
+    border: 3px solid #1a7a4a;
+    border-radius: 12px;
+    padding: 15px;
+    position: relative;
+    overflow-y: auto;
+    box-shadow: 5px 5px 0px #000;
+}
+
+.modal-close {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: #e74c3c;
+    color: #fff;
+    border: 2px solid #000;
+    border-radius: 5px;
+    width: 25px; height: 25px;
+    font-weight: 900;
+}
+
+/* UTILS */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a7a4a;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 2px solid #000;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: 0.3s;
+}
+.toast.show { 
+    opacity: 1; 
+    visibility: visible;
+}
+
+.debug-status-float {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 1000;
+}
+.status-pill {
+    background: rgba(0,0,0,0.8);
+    color: #fff;
+    font-size: 8px;
+    font-weight: bold;
+    padding: 3px 6px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    border: 1px solid #333;
+}
+.status-pill.on { color: #2ecc71; border-color: #2ecc71; }
+.status-pill.off { color: #e74c3c; border-color: #e74c3c; }
+
+.developer-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #7f8c8d;
+    padding-bottom: 10px;
+}
+

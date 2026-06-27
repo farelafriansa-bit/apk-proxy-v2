@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Menu Mod</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <!-- FLOATING STATUS -->
+    <div class="debug-status-float">
+	  <div class="status-pill off" id="floatShizuku">SHIZUKU: OFF</div>
+	  <div class="status-pill off" id="floatWireless">WIRELESS: OFF</div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="header">
+	  <div class="video-container">
+		<video autoplay loop muted playsinline>
+		  <source src="file:///android_asset/anime.mp4" type="video/mp4">
+		</video>
+	  </div>
+	  <div class="comic-bubble">MOD</div>
+    </div>
+
+    <!-- BANNER -->
+    <div class="app-banner-wrapper">
+	  <div class="app-banner">
+		<span class="app-name">INY PROXY</span>
+		<span class="app-sub">Menu</span>
+	  </div>
+    </div>
+
+    <!-- MENU LIST -->
+    <div class="menu-list">
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">aim body</span>
+		  <span class="menu-desc">body headshot</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusBody">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleBody" onchange="toggleMenu('body', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">aim lock</span>
+		  <span class="menu-desc">head lock</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusLock">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleLock" onchange="toggleMenu('lock', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">speed up</span>
+		  <span class="menu-desc">move speed</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusSpeed">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleSpeed" onchange="toggleMenu('speed', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">back jump</span>
+		  <span class="menu-desc">old style</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusJump">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleJump" onchange="toggleMenu('jump', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">bypass</span>
+		  <span class="menu-desc">anti ban</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusBypass">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleBypass" onchange="toggleMenu('bypass', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">refresh</span>
+		  <span class="menu-desc">auto refresh</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusRefresh">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleRefresh" onchange="toggleMenu('refresh', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <!-- GAME BOOSTER -->
+	  <div class="menu-item full-width" style="background:#f0fdf4;border-color:#1a7a4a;margin-top:5px;">
+		<div class="menu-info">
+		  <span class="menu-title" style="color:#1a7a4a;">Game Booster</span>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">Max FPS</span>
+		  <span class="menu-desc">144Hz</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusFps">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleFps" onchange="toggleBooster('fps', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">Lag Fix</span>
+		  <span class="menu-desc">720p</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusRes">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleRes" onchange="toggleBooster('res', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">Gaming Mode</span>
+		  <span class="menu-desc">Silent</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status off" id="statusMode">OFF</span>
+		  <label class="switch">
+			<input type="checkbox" id="toggleMode" onchange="toggleBooster('mode', this.checked)">
+			<span class="slider"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <!-- DEBUGGING SETTINGS -->
+	  <div class="menu-item full-width" style="background:#fdf2f2;border-color:#e74c3c;">
+		<div class="menu-info">
+		  <span class="menu-title" style="color:#c0392b;">Debugging</span>
+		</div>
+	  </div>
+
+	  <div class="menu-item" onclick="openWirelessSettings()">
+		<div class="menu-info">
+		  <span class="menu-title">Wireless</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status scan" id="statusWireless">SET</span>
+		</div>
+	  </div>
+
+	  <div class="menu-item" onclick="openShizuku()">
+		<div class="menu-info">
+		  <span class="menu-title">Shizuku</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status scan" id="statusShizuku">SET</span>
+		</div>
+	  </div>
+
+	  <!-- Wireless Debug Client -->
+	  <div class="menu-item" onclick="startWirelessDebugging()">
+		<div class="menu-info">
+		  <span class="menu-title">📡 Wireless Debug</span>
+		  <span class="menu-desc">Pairing dengan APK</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status scan" id="statusWirelessDebug">PAIR</span>
+		</div>
+	  </div>
+
+	  <!-- Pairing Code -->
+	  <div class="menu-item" onclick="showFloatingPairing()">
+		<div class="menu-info">
+		  <span class="menu-title">🔑 Pairing Code</span>
+		  <span class="menu-desc">Floating input</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status scan" id="statusFloatingPair">PAIR</span>
+		</div>
+	  </div>
+
+	  <!-- TAMBAH GAME -->
+	  <div class="menu-item full-width" onclick="openAddGameModal()" style="margin-top:5px;">
+		<div class="menu-info">
+		  <span class="menu-title">Tambah Game</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status scan" id="statusAddGame">ADD</span>
+		</div>
+	  </div>
+
+    </div>
+
+    <!-- DAFTAR GAME USER -->
+    <div class="game-section-wrapper">
+	  <div class="game-section-header">
+		<div class="game-section-title">
+		  <span class="title-text">Game Saya</span>
+		  <span class="title-badge" id="gameCount">0</span>
+		</div>
+		<div class="game-section-action">
+		  <button class="btn-refresh-games" onclick="refreshUserGames()">🔄</button>
+		</div>
+	  </div>
+	  <div class="game-grid" id="userGameList">
+		<div class="game-empty-state">
+		  <span class="empty-icon">🎯</span>
+		  <p class="empty-title">Belum Ada Game</p>
+		  <p class="empty-desc">Klik <strong>"Tambah Game"</strong> untuk menambahkan</p>
+		</div>
+	  </div>
+    </div>
+
+    <!-- START GAME -->
+    <div class="start-container">
+	  <button class="btn-start" onclick="startGame()">🎮 START GAME</button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="developer-footer">
+	  <span>✦</span> Developed by INY PROXY <span>✦</span><br>
+	  © 2026 All Rights Reserved
+    </div>
+
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <!-- MODAL ADD GAME -->
+    <div class="modal-overlay" id="addGameModal">
+	  <div class="modal-content">
+		<button class="modal-close" onclick="closeAddGameModal()">✕</button>
+		<h2>📥 Tambah Game</h2>
+		<div id="gameScanResult"><p style="text-align:center;color:#999;font-size:13px;">🔍 Scanning game...</p></div>
+	  </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

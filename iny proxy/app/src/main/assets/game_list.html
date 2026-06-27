@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Game Saya</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+
+    <div style="max-width:500px;margin:0 auto;padding:15px;">
+	  <a href="index.html" style="display:inline-block;margin-bottom:15px;padding:10px 20px;border:3px solid #000;border-radius:30px;background:#1a7a4a;color:#fff;font-size:14px;font-weight:900;font-family:'Comic Sans MS',sans-serif;cursor:pointer;box-shadow:4px 4px 0px #0d5c34;transition:all 0.3s;text-decoration:none;">⬅ Kembali</a>
+
+	  <div class="app-banner-wrapper">
+		<div class="app-banner">
+		  <span class="app-icon">📋</span>
+		  <span class="app-name">Game Saya</span>
+		  <span class="app-sub">✦ Daftar Game ✦</span>
+		</div>
+	  </div>
+
+	  <div class="game-grid" id="gameListContainer">
+		<div class="game-empty-state">
+		  <span class="empty-icon">🔍</span>
+		  <p class="empty-title">Memuat...</p>
+		</div>
+	  </div>
+    </div>
+
+    <div class="developer-footer">
+	  <span>✦</span> Developed by <span>✦</span><br>
+	  © 2026 All Rights Reserved
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="script.js"></script>
+<script>
+        function loadGameList() {
+            var container = document.getElementById('gameListContainer');
+            try {
+                var gamesJson = Android.getUserGames();
+                var games = JSON.parse(gamesJson);
+
+                if (games.length === 0) {
+                    container.innerHTML = `
+                        <div class="game-empty-state" style="grid-column:1/-1;">
+                            <span class="empty-icon">📭</span>
+                            <p class="empty-title">Belum Ada Game</p>
+                            <p class="empty-desc">Tambahkan game dari menu utama</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                var html = '';
+                for (var i = 0; i < games.length; i++) {
+                    var game = games[i];
+                    html += `
+                        <div class="game-card" onclick="playGame('${game.packageName}')">
+                            <div class="game-icon-wrapper">
+                                <img src="data:image/png;base64,${game.iconBase64}" alt="${game.appName}">
+                            </div>
+                            <div class="game-name">${game.appName}</div>
+                            <div class="game-actions">
+                                <button class="btn-play" onclick="event.stopPropagation(); playGame('${game.packageName}')">▶ Play</button>
+                                <button class="btn-remove" onclick="event.stopPropagation(); removeGameAndRefresh('${game.packageName}')">✕</button>
+                            </div>
+                            <span class="game-badge"></span>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+
+            } catch(e) {
+                container.innerHTML = `
+                    <div class="game-empty-state" style="grid-column:1/-1;">
+                        <span class="empty-icon">⚠️</span>
+                        <p class="empty-title">Gagal Memuat</p>
+                        <p class="empty-desc">Terjadi kesalahan</p>
+                    </div>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGameList();
+        });
+</script>
+  </body>
+</html>
