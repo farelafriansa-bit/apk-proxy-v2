@@ -62,7 +62,6 @@ public class MainActivity extends Activity {
             Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
 
             // Second attempt: Fallback to Shizuku shell if available
-            // This allows 'real' ADB-level setting changes if Shizuku is authorized
             Runtime.getRuntime().exec(new String[]{"sh", "-c", "shizuku shell " + command});
         } catch (Exception e) {
             e.printStackTrace();
@@ -459,13 +458,13 @@ public class MainActivity extends Activity {
 							Intent settingsIntent = new Intent("android.settings.ADB_WIFI_SETTINGS");
 							PendingIntent settingsPending = PendingIntent.getActivity(
 								MainActivity.this, 1, settingsIntent,
-								PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+								PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? 0x04000000 : 0)); // FLAG_IMMUTABLE
 
                             Intent receiverIntent = new Intent(MainActivity.this, PairingReceiver.class);
                             receiverIntent.setAction(PairingReceiver.ACTION_PAIRING_CODE);
                             PendingIntent receiverPending = PendingIntent.getBroadcast(
                                 MainActivity.this, 2, receiverIntent,
-                                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? PendingIntent.FLAG_MUTABLE : 0));
+                                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? 0x02000000 : 0)); // FLAG_MUTABLE
 
                             RemoteInput remoteInput = new RemoteInput.Builder(PairingReceiver.KEY_TEXT_REPLY)
                                 .setLabel("Masukkan PORT CODE (misal: 12345 678901)")
@@ -508,14 +507,178 @@ public class MainActivity extends Activity {
 				});
         }
 
-        private String getLocalIpAddress() {
+        @JavascriptInterface
+        public String scanAllGames() {
+            JSONArray gamesArray = new JSONArray();
+            PackageManager pm = getPackageManager();
             try {
-                InetAddress[] addresses = InetAddress.getAllByName(InetAddress.getLocalHost().getHostName());
-                for (InetAddress addr : addresses) {
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) return addr.getHostAddress();
+                List<ApplicationInfo> apps = pm.getInstalledApplications(0);
+                for (ApplicationInfo appInfo : apps) {
+                    if (isGameApp(appInfo, pm)) {
+                        JSONObject game = new JSONObject();
+                        game.put("packageName", appInfo.packageName);
+                        game.put("appName", pm.getApplicationLabel(appInfo).toString());
+                        game.put("isInstalled", true);
+                        game.put("isAdded", userGameList.contains(appInfo.packageName));
+                        Drawable icon = pm.getApplicationIcon(appInfo);
+                        String iconBase64 = drawableToBase64(icon);
+                        game.put("iconBase64", iconBase64);
+                        gamesArray.put(game);
+                    }
                 }
-            } catch (Exception e) {}
-            return "127.0.0.1";
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return gamesArray.toString();
+        }
+
+        private boolean isGameApp(ApplicationInfo appInfo, PackageManager pm) {
+            String[] gamePackages = {
+                "com.dts.freefireth", "com.dts.freefiremax", "com.tencent.ig",
+                "com.pubg.krmobile", "com.garena.game.kg", "com.mobile.legends",
+                "com.supercell.clashofclans", "com.supercell.brawlstars",
+                "com.roblox.client", "com.mojang.minecraftpe",
+                "com.activision.callofduty.shooter", "com.riotgames.league.wildrift",
+                "com.tencent.tmgp.sgame", "com.tencent.tmgp.pubgmhd",
+                "com.gameloft.android.ANMP.GloftA9HM", "com.gameloft.android.ANMP.GloftA8HM",
+                "com.ea.games.simsmobile", "com.supercell.clashroyale",
+                "com.netease.heartpro", "com.dragonnest", "com.vng.pubgmobile",
+                "com.tencent.tmgp.cod", "com.pubg.imobile"
+            };
+            for (String pkg : gamePackages) {
+                if (appInfo.packageName.equals(pkg)) return true;
+            }
+            return false;
+        }
+
+        @JavascriptInterface
+        public void addGame(final String packageName) {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (!userGameList.contains(packageName)) {
+                            userGameList.add(packageName);
+                            showToast("✅ Game berhasil ditambahkan!");
+                        } else {
+                            showToast("⚠️ Game sudah ada di daftar");
+                        }
+                    }
+                });
+        }
+
+        @JavascriptInterface
+        public void removeGame(final String packageName) {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (userGameList.contains(packageName)) {
+                            userGameList.remove(packageName);
+                            showToast("🗑️ Game dihapus dari daftar");
+                        }
+                    }
+                });
+        }
+
+        @JavascriptInterface
+        public String getUserGames() {
+            JSONArray gamesArray = new JSONArray();
+            PackageManager pm = getPackageManager();
+            try {
+                synchronized (userGameList) {
+                    List<String> listCopy = new ArrayList<String>(userGameList);
+                    for (String pkg : listCopy) {
+                        try {
+                            ApplicationInfo appInfo = pm.getApplicationInfo(pkg, 0);
+                            JSONObject game = new JSONObject();
+                            game.put("packageName", pkg);
+                            game.put("appName", pm.getApplicationLabel(appInfo).toString());
+                            Drawable icon = pm.getApplicationIcon(appInfo);
+                            String iconBase64 = drawableToBase64(icon);
+                            game.put("iconBase64", iconBase64);
+                            gamesArray.put(game);
+                        } catch (PackageManager.NameNotFoundException e) {
+                            userGameList.remove(pkg);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return gamesArray.toString();
+        }
+
+        @JavascriptInterface
+        public void openGame(final String packageName) {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = getPackageManager().getLaunchIntentForPackage(packageName);
+                            if (intent != null) {
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                showToast("🎮 Membuka game...");
+                            } else {
+                                showToast("❌ Game tidak ditemukan!");
+                            }
+                        } catch (Exception e) {
+                            showToast("❌ Gagal membuka game!");
+                        }
+                    }
+                });
+        }
+
+        @JavascriptInterface
+        public void openFreeFire() {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Intent intent = getPackageManager().getLaunchIntentForPackage("com.dts.freefireth");
+                            if (intent == null) intent = getPackageManager().getLaunchIntentForPackage("com.dts.freefiremax");
+
+                            if (intent != null) {
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                showToast("🎮 Membuka Free Fire...");
+                            } else {
+                                Intent playStore = new Intent(Intent.ACTION_VIEW);
+                                playStore.setData(Uri.parse("https://play.google.com/store/apps/details?id=com.dts.freefireth"));
+                                playStore.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(playStore);
+                                showToast("❌ Free Fire tidak terinstall!");
+                            }
+                        } catch (Exception e) {
+                            showToast("❌ Gagal membuka Free Fire!");
+                        }
+                    }
+                });
+        }
+
+        private String drawableToBase64(Drawable drawable) {
+            try {
+                android.graphics.Bitmap bitmap = null;
+                if (drawable instanceof android.graphics.drawable.BitmapDrawable) {
+                    bitmap = ((android.graphics.drawable.BitmapDrawable) drawable).getBitmap();
+                } else {
+                    int width = drawable.getIntrinsicWidth() > 0 ? drawable.getIntrinsicWidth() : 128;
+                    int height = drawable.getIntrinsicHeight() > 0 ? drawable.getIntrinsicHeight() : 128;
+                    if (width > 128) {
+                        height = (int) (height * (128.0 / width));
+                        width = 128;
+                    }
+                    bitmap = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888);
+                    android.graphics.Canvas canvas = new android.graphics.Canvas(bitmap);
+                    drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+                    drawable.draw(canvas);
+                }
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 80, baos);
+                byte[] imageBytes = baos.toByteArray();
+                return android.util.Base64.encodeToString(imageBytes, android.util.Base64.DEFAULT);
+            } catch (Exception e) {
+                return "";
+            }
         }
 
         @JavascriptInterface
@@ -526,6 +689,29 @@ public class MainActivity extends Activity {
                         Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
                     }
                 });
+        }
+
+        @JavascriptInterface
+        public void copyToClipboard(final String text) {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        ClipData clip = ClipData.newPlainText("text", text);
+                        clipboard.setPrimaryClip(clip);
+                        showToast("📋 Text disalin: " + text);
+                    }
+                });
+        }
+
+        @JavascriptInterface
+        public String getClipboardText() {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard.hasPrimaryClip()) {
+                ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+                return item.getText().toString();
+            }
+            return "";
         }
     }
 }
