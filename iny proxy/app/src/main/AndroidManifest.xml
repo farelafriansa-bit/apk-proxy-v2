@@ -42,6 +42,10 @@
 	IZIN QUERY PACKAGES (Android 11+)
 	======================================== -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+
+    <!-- IZIN UNTUK MENDENGARKAN NOTIFIKASI -->
+    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+
 	<!-- Izin untuk Wireless Debugging -->
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -71,6 +75,22 @@
         <meta-data
             android:name="moe.shizuku.client.V3_SUPPORT"
             android:value="true" />
+
+        <service
+            android:name=".GameNotificationListener"
+            android:label="Game Notification Blocker"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver android:name=".PairingReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="com.whatsap.whatunban.ACTION_PAIRING_CODE" />
+            </intent-filter>
+        </receiver>
 
     </application>
 
