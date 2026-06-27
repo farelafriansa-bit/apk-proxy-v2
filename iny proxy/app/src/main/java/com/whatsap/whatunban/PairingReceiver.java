@@ -21,23 +21,24 @@ public class PairingReceiver extends BroadcastReceiver {
             if (remoteInput != null) {
                 CharSequence result = remoteInput.getCharSequence(KEY_TEXT_REPLY);
                 if (result != null) {
-                    String input = result.toString().trim();
+                    String pairingCode = result.toString().trim();
 
-                    // Store input
+                    // Store pairing code
                     SharedPreferences prefs = context.getSharedPreferences("pairing", Context.MODE_PRIVATE);
-                    prefs.edit().putString("pairing_code_input", input).apply();
+                    prefs.edit().putString("pairing_code", pairingCode).apply();
 
-                    // Copy to clipboard as requested for convenience
+                    // Copy to clipboard for convenience
                     ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("pairing_data", input);
+                    ClipData clip = ClipData.newPlainText("pairing_code", pairingCode);
                     if (clipboard != null) {
                         clipboard.setPrimaryClip(clip);
                     }
 
-                    Toast.makeText(context, "✅ Data Pairing: " + input + " disalin!", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "🔑 Kode Pairing: " + pairingCode + " ✅ Disalin!", Toast.LENGTH_SHORT).show();
 
-                    // We notify the user that we received it
-                    // In a real scenario, we would trigger 'adb pair' here if we had the adb implementation
+                    // Triggering a broadcast or intent to MainActivity could refresh the UI if it's open
+                    Intent refreshIntent = new Intent("com.whatsap.whatunban.REFRESH_STATUS");
+                    context.sendBroadcast(refreshIntent);
                 }
             }
         }

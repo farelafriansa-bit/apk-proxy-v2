@@ -435,10 +435,21 @@ public class MainActivity extends Activity {
 
                 boolean shizukuRunning = false;
                 if (shizukuInstalled) {
-                    Process p = Runtime.getRuntime().exec("getprop moe.shizuku.privileged.api");
-                    BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                    String l = r.readLine();
-                    if (l != null && !l.isEmpty()) shizukuRunning = true;
+                    // Optimized check for Shizuku
+                    String[] commands = {"getprop moe.shizuku.privileged.api", "ps -A", "ps"};
+                    for (String cmd : commands) {
+                        Process p = Runtime.getRuntime().exec(cmd);
+                        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                        String l;
+                        while ((l = r.readLine()) != null) {
+                            if (l.toLowerCase().contains("shizuku") || (cmd.startsWith("getprop") && !l.isEmpty())) {
+                                shizukuRunning = true;
+                                break;
+                            }
+                        }
+                        p.destroy();
+                        if (shizukuRunning) break;
+                    }
                 }
                 status.put("shizuku", shizukuRunning);
                 status.put("usb_debug", adbEnabled);
@@ -467,7 +478,7 @@ public class MainActivity extends Activity {
                                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? 0x02000000 : 0)); // FLAG_MUTABLE
 
                             RemoteInput remoteInput = new RemoteInput.Builder(PairingReceiver.KEY_TEXT_REPLY)
-                                .setLabel("Masukkan PORT CODE (misal: 12345 678901)")
+                                .setLabel("Masukkan Kode Pairing 6 Digit")
                                 .build();
 
 							Notification.Builder builder;
@@ -478,8 +489,8 @@ public class MainActivity extends Activity {
 							}
 
 							builder.setSmallIcon(android.R.drawable.ic_dialog_info)
-                                .setContentTitle("🔑 Real Pairing Wireless Debugging")
-                                .setContentText("Isi Port dan Kode Pairing di sini")
+                                .setContentTitle("🔑 Pairing Wireless Debugging")
+                                .setContentText("Masukkan 6 digit kode pairing di sini")
                                 .setContentIntent(settingsPending)
                                 .setAutoCancel(false)
                                 .setOngoing(true)
@@ -487,7 +498,7 @@ public class MainActivity extends Activity {
 
 							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                                 Notification.Action action = new Notification.Action.Builder(
-                                    android.R.drawable.ic_menu_edit, "🔑 Kirim Data", receiverPending)
+                                    android.R.drawable.ic_menu_edit, "🔑 Kirim Kode", receiverPending)
                                     .addRemoteInput(remoteInput)
                                     .build();
                                 builder.addAction(action);
@@ -498,13 +509,33 @@ public class MainActivity extends Activity {
 							NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 							if (nm != null) {
 								nm.notify(PAIRING_NOTIFICATION_ID, builder.build());
-								showToast("🔔 Gunakan kolom notifikasi untuk pairing!");
+								showToast("🔔 Gunakan kolom notifikasi untuk isi kode pairing!");
 							}
 						} catch (Exception e) {
 							showToast("⚠️ Gagal mengirim notifikasi!");
 						}
 					}
 				});
+        }
+
+        private String getLocalIpAddress() {
+            try {
+                InetAddress[] addresses = InetAddress.getAllByName(InetAddress.getLocalHost().getHostName());
+                for (InetAddress addr : addresses) {
+                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) return addr.getHostAddress();
+                }
+            } catch (Exception e) {}
+            return "127.0.0.1";
+        }
+
+        @JavascriptInterface
+        public void showToast(final String message) {
+            handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                    }
+                });
         }
 
         @JavascriptInterface
@@ -679,16 +710,6 @@ public class MainActivity extends Activity {
             } catch (Exception e) {
                 return "";
             }
-        }
-
-        @JavascriptInterface
-        public void showToast(final String message) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
-                });
         }
 
         @JavascriptInterface
