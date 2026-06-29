@@ -408,11 +408,16 @@ public class MainActivity extends Activity {
                 status.put("shizuku", shizukuRunning);
                 status.put("usb_debug", adbEnabled);
 
-                // Add details for UI
+                // Detailed check for UI message
                 if (!shizukuInstalled) {
                     status.put("message", "Shizuku Belum Terinstall");
                 } else if (!shizukuRunning) {
-                    status.put("message", "Shizuku Belum Aktif");
+                    // Check if it's a permission issue or truly not running
+                    if (ShizukuHelper.getService(MainActivity.this) != null) {
+                         status.put("message", "Shizuku: Belum Diizinkan");
+                    } else {
+                         status.put("message", "Shizuku: Belum Aktif");
+                    }
                 } else {
                     status.put("message", "Shizuku Aktif");
                 }

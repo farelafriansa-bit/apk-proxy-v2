@@ -19,11 +19,16 @@ public class ShizukuHelper {
     private static IShizukuService sService;
 
     public static synchronized IShizukuService getService(final Context context) {
-        if (sService != null && sService.asBinder().isBinderAlive()) {
-            return sService;
+        if (sService != null) {
+            try {
+                if (sService.asBinder().isBinderAlive()) {
+                    return sService;
+                }
+            } catch (Exception ignored) {}
         }
 
         try {
+            // First attempt: Standard "getBinder" call
             Bundle bundle = context.getContentResolver().call(PROVIDER_URI, "getBinder", null, null);
             if (bundle != null) {
                 IBinder binder = bundle.getBinder("binder");
@@ -37,8 +42,12 @@ public class ShizukuHelper {
                 }
             }
         } catch (Exception e) {
-            android.util.Log.e("ShizukuHelper", "getService error", e);
+            android.util.Log.e("ShizukuHelper", "getService call failed", e);
         }
+
+        // Second attempt: Direct Binder retrieval via Binder object in bundle (if any other method exists)
+        // Shizuku V11+ usually responds to 'getBinder' but visibility is the main blocker.
+
         return null;
     }
 
@@ -100,13 +109,26 @@ public class ShizukuHelper {
             }
 
             sb.append("Checking Shizuku Provider...\n");
+
+            // Check authority resolution
+            try {
+                android.content.pm.ProviderInfo pri = context.getPackageManager().resolveContentProvider(PROVIDER_AUTHORITY, 0);
+                if (pri == null) {
+                    sb.append("❌ Authority NOT resolvable. (Visibility issue?)\n");
+                } else {
+                    sb.append("✅ Authority resolved to: ").append(pri.packageName).append("\n");
+                }
+            } catch (Exception e) {
+                sb.append("⚠️ Authority resolution check error: ").append(e.getMessage()).append("\n");
+            }
+
             Bundle bundle = null;
             try {
                 bundle = context.getContentResolver().call(PROVIDER_URI, "getBinder", null, null);
             } catch (Exception e) {
                 sb.append("❌ Provider call failed: ").append(e.getMessage()).append("\n");
-                if (e.getMessage() != null && e.getMessage().contains("Unknown authority")) {
-                    sb.append("👉 Possible cause: Shizuku is not running or visibility issues.\n");
+                if (e.getMessage() != null && (e.getMessage().contains("Unknown authority") || e.getMessage().contains("Failed to find provider"))) {
+                    sb.append("👉 Possible cause: Shizuku is not running or missing <queries> in Manifest.\n");
                 }
             }
 
