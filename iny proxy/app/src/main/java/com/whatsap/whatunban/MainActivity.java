@@ -323,6 +323,21 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void testShizukuConnection() {
+            final String diagnostic = ShizukuHelper.getDiagnostics(MainActivity.this);
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Diagnostic Shizuku")
+                        .setMessage(diagnostic)
+                        .setPositiveButton("OK", null)
+                        .show();
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void showPairingPopup() {
             MainActivity.this.showPairingNotification();
         }

@@ -1,4 +1,4 @@
-package moe.shizuku.server;
+package rikka.shizuku;
 
 import android.os.ParcelFileDescriptor;
 

@@ -17,6 +17,18 @@ function testConnection() {
 // ========================================
 // SHIZUKU FUNCTIONS
 // ========================================
+function testShizuku() {
+    try {
+        if (typeof Android !== 'undefined' && Android.testShizukuConnection) {
+            Android.testShizukuConnection();
+        } else {
+            showToast('❌ Fitur diagnostik tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
 function openShizuku() {
     showToast('🔓 Membuka Shizuku...');
     try {
