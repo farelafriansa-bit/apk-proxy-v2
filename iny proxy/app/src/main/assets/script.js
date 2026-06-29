@@ -32,6 +32,22 @@ function openShizuku() {
 }
 
 // ========================================
+// PASTE FILE FUNCTIONS
+// ========================================
+function pasteFile() {
+    showToast('📋 Melakukan Paste Config...');
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.pasteFile();
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
 // UPDATE FLOATING STATUS
 // ========================================
 function updateStatus() {

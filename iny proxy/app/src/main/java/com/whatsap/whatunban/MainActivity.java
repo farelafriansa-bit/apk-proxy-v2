@@ -21,22 +21,29 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+// Import Shizuku
+import moe.shizuku.api.Shizuku;
+
 public class MainActivity extends Activity {
     private WebView webView;
+    private TextView statusText;
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "debug_channel";
     private static final int PERMISSION_REQUEST_CODE = 123;
     private static final int OVERLAY_PERMISSION_REQUEST = 124;
+    private static final int SHIZUKU_PERMISSION_REQUEST_CODE = 1000;
 
     private List<String> userGameList = java.util.Collections.synchronizedList(new ArrayList<String>());
 
@@ -45,11 +52,14 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // Bind UI components
+        statusText = (TextView) findViewById(R.id.statusText);
+        webView = (WebView) findViewById(R.id.webView);
+
         createNotificationChannel();
         requestAllPermissions();
 
-        webView = (WebView) findViewById(R.id.webView);
-
+        // Setup WebView
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setLoadWithOverviewMode(true);
@@ -75,6 +85,20 @@ public class MainActivity extends Activity {
             });
 
         webView.setWebChromeClient(new WebChromeClient());
+
+        // Listen for Shizuku permission result using anonymous class
+        Shizuku.addRequestPermissionResultListener(new Shizuku.OnRequestPermissionResultListener() {
+            @Override
+            public void onRequestPermissionResult(int requestCode, int grantResult) {
+                if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
+                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                        updateStatusText("Shizuku: Permission Granted");
+                    } else {
+                        updateStatusText("Shizuku: Permission Denied");
+                    }
+                }
+            }
+        });
     }
 
     private void requestAllPermissions() {
@@ -120,6 +144,127 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void updateStatusText(final String text) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (statusText != null) {
+                    statusText.setText("Status: " + text);
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // SHIZUKU CORE METHODS
+    // ========================================
+
+    // 1. Fungsi untuk mengecek apakah Shizuku sedang berjalan
+    private boolean isShizukuRunning() {
+        try {
+            // Gunakan Shizuku.pingBinder() untuk cek apakah service aktif
+            return Shizuku.pingBinder();
+        } catch (Exception e) {
+            // Jika error maka Shizuku tidak aktif
+            return false;
+        }
+    }
+
+    // 2. Fungsi utama untuk copy file
+    private void pasteFile() {
+        // a. Cek Shizuku aktif
+        if (!isShizukuRunning()) {
+            showToast("Shizuku is not running!");
+            updateStatusText("Shizuku: Not Running");
+            return;
+        }
+
+        // Cek permission Shizuku, jika belum ada minta permission
+        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
+            Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE);
+            return;
+        }
+
+        // b. Cek file sumber di /sdcard/Download/localconfig.json
+        final String sourcePath = "/sdcard/Download/localconfig.json";
+        File sourceFile = new File(sourcePath);
+        if (!sourceFile.exists()) {
+            showToast("Source file not found: " + sourcePath);
+            updateStatusText("Error: Source file missing");
+            return;
+        }
+
+        // c. Folder tujuan /data/data/com.dtsfreefireth/files/
+        final String targetDir = "/data/data/com.dtsfreefireth/files/";
+
+        // d. Jalankan perintah copy via Shizuku shell command execution
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    updateStatusText("Copying file...");
+
+                    // Pastikan folder tujuan ada dengan mkdir -p
+                    String mkdirCmd = "mkdir -p " + targetDir;
+                    executeShizukuCommand(mkdirCmd);
+
+                    // Jalankan perintah copy: cp source target
+                    String cpCmd = "cp " + sourcePath + " " + targetDir;
+                    int exitCode = executeShizukuCommand(cpCmd);
+
+                    // e. Tampilkan Toast dan update TextView status
+                    if (exitCode == 0) {
+                        showToast("✅ File pasted successfully!");
+                        updateStatusText("Success: File copied to target folder");
+
+                        // f. Jika sukses, panggil finish() setelah delay
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                finish();
+                            }
+                        }, 2000);
+                    } else {
+                        showToast("❌ Failed to paste file. Exit code: " + exitCode);
+                        updateStatusText("Error: Command failed with exit code " + exitCode);
+                    }
+                } catch (Exception e) {
+                    // Tangkap exception jika proses eksekusi gagal
+                    showToast("⚠️ Exception: " + e.getMessage());
+                    updateStatusText("Exception: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    // 3. Cara eksekusi perintah via Shizuku menggunakan newProcess
+    private int executeShizukuCommand(String command) throws Exception {
+        // Setup arguments untuk shell
+        String[] args = new String[]{"sh", "-c", command};
+        // Jalankan perintah via Shizuku
+        Process process = Shizuku.newProcess(args, null, null);
+
+        // Tunggu proses selesai dan tangkap return code
+        int exitCode = process.waitFor();
+
+        // Tutup semua streams untuk mencegah memory leak
+        process.getInputStream().close();
+        process.getErrorStream().close();
+        process.getOutputStream().close();
+        process.destroy();
+
+        return exitCode;
+    }
+
+    private void showToast(final String msg) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     // ========================================
     // WEB APP INTERFACE
     // ========================================
@@ -160,6 +305,12 @@ public class MainActivity extends Activity {
                 });
         }
 
+        // Interface untuk memanggil fungsi pasteFile dari WebView
+        @JavascriptInterface
+        public void pasteFile() {
+            MainActivity.this.pasteFile();
+        }
+
         @JavascriptInterface
         public String checkDebugStatus() {
             JSONObject status = new JSONObject();
@@ -175,23 +326,8 @@ public class MainActivity extends Activity {
                 }
                 status.put("shizuku_installed", shizukuInstalled);
 
-                boolean shizukuRunning = false;
-                if (shizukuInstalled) {
-                    String[] commands = {"getprop moe.shizuku.privileged.api", "ps -A", "ps"};
-                    for (String cmd : commands) {
-                        Process p = Runtime.getRuntime().exec(cmd);
-                        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-                        String l;
-                        while ((l = r.readLine()) != null) {
-                            if (l.toLowerCase().contains("shizuku") || (cmd.startsWith("getprop") && !l.isEmpty())) {
-                                shizukuRunning = true;
-                                break;
-                            }
-                        }
-                        p.destroy();
-                        if (shizukuRunning) break;
-                    }
-                }
+                // Panggil isShizukuRunning()
+                boolean shizukuRunning = isShizukuRunning();
                 status.put("shizuku", shizukuRunning);
                 status.put("usb_debug", adbEnabled);
 
@@ -203,12 +339,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void showToast(final String message) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
-                });
+            MainActivity.this.showToast(message);
         }
 
         @JavascriptInterface
