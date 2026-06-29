@@ -213,12 +213,21 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
+                    updateStatusText("Forcing 144 FPS...");
+                    // Try different ways to force refresh rate
                     ShizukuHelper.executeCommand("settings put global peak_refresh_rate 144.0", MainActivity.this);
                     ShizukuHelper.executeCommand("settings put global min_refresh_rate 144.0", MainActivity.this);
                     ShizukuHelper.executeCommand("settings put global user_refresh_rate 144", MainActivity.this);
-                    showToast("🚀 144 FPS Forced!");
+
+                    // Fallback for some devices (oneplus/oppo/realme)
+                    ShizukuHelper.executeCommand("settings put system peak_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put system min_refresh_rate 144.0", MainActivity.this);
+
+                    showToast("🚀 144 FPS Boosted! (Pastikan layar mendukung)");
+                    updateStatusText("Shizuku: Active (FPS Boosted)");
                 } catch (Exception e) {
-                    showToast("⚠️ Gagal force 144 FPS");
+                    showToast("⚠️ Gagal force 144 FPS via Shizuku");
+                    updateStatusText("Error: FPS Boost failed");
                 }
             }
         }).start();
@@ -381,7 +390,10 @@ public class MainActivity extends Activity {
         public String checkDebugStatus() {
             JSONObject status = new JSONObject();
             try {
-                boolean adbEnabled = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
+                boolean adbEnabled = false;
+                try {
+                    adbEnabled = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
+                } catch (Exception ignored) {}
 
                 boolean shizukuInstalled = false;
                 try {
@@ -395,6 +407,15 @@ public class MainActivity extends Activity {
                 boolean shizukuRunning = isShizukuRunning();
                 status.put("shizuku", shizukuRunning);
                 status.put("usb_debug", adbEnabled);
+
+                // Add details for UI
+                if (!shizukuInstalled) {
+                    status.put("message", "Shizuku Belum Terinstall");
+                } else if (!shizukuRunning) {
+                    status.put("message", "Shizuku Belum Aktif");
+                } else {
+                    status.put("message", "Shizuku Aktif");
+                }
 
             } catch (Exception e) {
                 e.printStackTrace();

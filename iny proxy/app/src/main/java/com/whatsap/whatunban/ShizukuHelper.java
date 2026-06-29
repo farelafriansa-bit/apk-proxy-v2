@@ -90,10 +90,28 @@ public class ShizukuHelper {
     public static String getDiagnostics(Context context) {
         StringBuilder sb = new StringBuilder();
         try {
+            sb.append("Checking Shizuku Package...\n");
+            try {
+                android.content.pm.PackageInfo pi = context.getPackageManager().getPackageInfo("moe.shizuku.privileged.api", 0);
+                sb.append("✅ Package found: ").append(pi.versionName).append("\n");
+            } catch (Exception e) {
+                sb.append("❌ Package 'moe.shizuku.privileged.api' NOT FOUND\n");
+                return sb.toString();
+            }
+
             sb.append("Checking Shizuku Provider...\n");
-            Bundle bundle = context.getContentResolver().call(PROVIDER_URI, "getBinder", null, null);
+            Bundle bundle = null;
+            try {
+                bundle = context.getContentResolver().call(PROVIDER_URI, "getBinder", null, null);
+            } catch (Exception e) {
+                sb.append("❌ Provider call failed: ").append(e.getMessage()).append("\n");
+                if (e.getMessage() != null && e.getMessage().contains("Unknown authority")) {
+                    sb.append("👉 Possible cause: Shizuku is not running or visibility issues.\n");
+                }
+            }
+
             if (bundle == null) {
-                sb.append("❌ Provider call returned NULL\n");
+                sb.append("❌ Provider call returned NULL. (Is Shizuku started?)\n");
             } else {
                 IBinder binder = bundle.getBinder("binder");
                 if (binder == null) {

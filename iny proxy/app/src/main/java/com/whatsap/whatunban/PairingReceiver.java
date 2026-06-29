@@ -44,23 +44,24 @@ public class PairingReceiver extends BroadcastReceiver {
                                 // or use the 'am' command to trigger pairing if available.
                                 // Alternatively, we can try to find the internal 'adb' binary if it exists.
 
-                                String cmd = "adb pair localhost:" + port + " " + pairingCode;
-                                // In many devices, 'adb' is not in path. We might need to use full path if known.
-                                // Or we can try to use 'service call' to talk to adbd directly.
+                                String[] adbPaths = {"adb", "/system/bin/adb", "/system/xbin/adb", "/apex/com.android.adbd/bin/adb", "/data/local/tmp/adb"};
+                                boolean success = false;
 
-                                int exitCode = ShizukuHelper.executeCommand(cmd, context);
+                                for (int i = 0; i < adbPaths.length; i++) {
+                                    String cmd = adbPaths[i] + " pair localhost:" + port + " " + pairingCode;
+                                    try {
+                                        int exitCode = ShizukuHelper.executeCommand(cmd, context);
+                                        if (exitCode == 0) {
+                                            success = true;
+                                            break;
+                                        }
+                                    } catch (Exception ignored) {}
+                                }
 
-                                if (exitCode == 0) {
+                                if (success) {
                                     showToast(context, "✅ Pairing Berhasil!");
                                 } else {
-                                    // If 'adb' command fails, it might be because it's not in PATH.
-                                    // On some devices, it's in /system/bin/adb
-                                    exitCode = ShizukuHelper.executeCommand("/system/bin/adb pair localhost:" + port + " " + pairingCode, context);
-                                    if (exitCode == 0) {
-                                        showToast(context, "✅ Pairing Berhasil!");
-                                    } else {
-                                        showToast(context, "❌ Pairing Gagal (Code: " + exitCode + "). Pastikan Port & Code Benar.");
-                                    }
+                                    showToast(context, "❌ Pairing Gagal. Pastikan Wireless Debugging Aktif di Opsi Pengembang.");
                                 }
 
                             } catch (Exception e) {

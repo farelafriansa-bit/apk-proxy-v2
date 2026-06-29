@@ -69,12 +69,12 @@ function updateStatus() {
         var shizukuMenu = document.getElementById('statusShizuku');
 
         if (shizukuEl) {
-            shizukuEl.textContent = status.shizuku ? 'SHIZUKU: ON' : 'SHIZUKU: OFF';
+            shizukuEl.textContent = 'SHIZUKU: ' + (status.shizuku ? 'ON' : 'OFF');
             shizukuEl.className = 'status-pill ' + (status.shizuku ? 'on' : 'off');
         }
         if (shizukuMenu) {
-            shizukuMenu.textContent = status.shizuku ? 'ON' : 'OFF';
-            shizukuMenu.style.background = status.shizuku ? '#2ecc71' : '#9b59b6';
+            shizukuMenu.textContent = status.shizuku ? 'ON' : (status.shizuku_installed ? 'START' : 'GET');
+            shizukuMenu.style.background = status.shizuku ? '#2ecc71' : (status.shizuku_installed ? '#f39c12' : '#9b59b6');
             shizukuMenu.style.color = '#fff';
         }
     } catch(e) {
