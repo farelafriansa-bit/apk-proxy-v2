@@ -20,7 +20,7 @@
     <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
 
     <!-- ========================================
-	IZIN BOOSTER
+	IZIN SISTEM
 	======================================== -->
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -42,9 +42,6 @@
 	IZIN QUERY PACKAGES (Android 11+)
 	======================================== -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-
-    <!-- IZIN UNTUK MENDENGARKAN NOTIFIKASI -->
-    <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
 
     <application
         android:allowBackup="true"
@@ -69,16 +66,6 @@
         <meta-data
             android:name="moe.shizuku.client.V3_SUPPORT"
             android:value="true" />
-
-        <service
-            android:name=".GameNotificationListener"
-            android:label="Game Notification Blocker"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
 
     </application>
 

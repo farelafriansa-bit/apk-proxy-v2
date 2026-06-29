@@ -1,20 +1,15 @@
 package com.whatsap.whatunban;
 
 import android.app.Activity;
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,8 +27,6 @@ import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,25 +39,6 @@ public class MainActivity extends Activity {
     private static final int OVERLAY_PERMISSION_REQUEST = 124;
 
     private List<String> userGameList = java.util.Collections.synchronizedList(new ArrayList<String>());
-
-    private boolean isAutoBody = false;
-    private boolean isAutoLock = false;
-    private boolean isAutoSpeed = false;
-    private boolean isAutoJump = false;
-    private boolean isAutoBypass = false;
-    private boolean isAutoRefresh = false;
-
-    private void runShellCommand(String command) {
-        try {
-            // First attempt: Standard shell
-            Runtime.getRuntime().exec(new String[]{"sh", "-c", command});
-
-            // Second attempt: Fallback to Shizuku shell if available
-            Runtime.getRuntime().exec(new String[]{"sh", "-c", "shizuku shell " + command});
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,8 +108,8 @@ public class MainActivity extends Activity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Booster Notifications";
-            String description = "Notifications for Gaming Mode and Booster";
+            CharSequence name = "Debug Notifications";
+            String description = "Notifications for Shizuku and Debugging";
             int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
@@ -161,207 +135,6 @@ public class MainActivity extends Activity {
 				});
         }
 
-        @JavascriptInterface
-        public void executeCommand(final String menu, final String action) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (menu.equals("body")) {
-                            isAutoBody = action.equals("start");
-                            showToast("aim body: " + (isAutoBody ? "ON" : "OFF"));
-                        } else if (menu.equals("lock")) {
-                            isAutoLock = action.equals("start");
-                            showToast("aim lock: " + (isAutoLock ? "ON" : "OFF"));
-                        } else if (menu.equals("speed")) {
-                            isAutoSpeed = action.equals("start");
-                            showToast("speed up: " + (isAutoSpeed ? "ON" : "OFF"));
-                        } else if (menu.equals("jump")) {
-                            isAutoJump = action.equals("start");
-                            showToast("back jump: " + (isAutoJump ? "ON" : "OFF"));
-                        } else if (menu.equals("bypass")) {
-                            isAutoBypass = action.equals("start");
-                            showToast("bypass: " + (isAutoBypass ? "ON" : "OFF"));
-                        } else if (menu.equals("refresh")) {
-                            isAutoRefresh = action.equals("start");
-                            showToast("auto refresh: " + (isAutoRefresh ? "ON" : "OFF"));
-                        }
-                    }
-                });
-        }
-
-        @JavascriptInterface
-        public void executeBooster(final String type, final String action) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (type.equals("fps")) {
-                            if (action.equals("start")) {
-                                startFPSBooster();
-                            } else {
-                                stopFPSBooster();
-                            }
-                        } else if (type.equals("res")) {
-                            if (action.equals("start")) {
-                                startResBooster();
-                            } else {
-                                stopResBooster();
-                            }
-                        } else if (type.equals("mode")) {
-                            if (action.equals("start")) {
-                                startModeBooster();
-                            } else {
-                                stopModeBooster();
-                            }
-                        } else if (type.equals("network")) {
-                            if (action.equals("start")) {
-                                startNetworkBooster();
-                            } else {
-                                stopNetworkBooster();
-                            }
-                        } else if (type.equals("ram")) {
-                            if (action.equals("start")) {
-                                startRAMBooster();
-                            } else {
-                                stopRAMBooster();
-                            }
-                        }
-                    }
-                });
-        }
-
-        private void startFPSBooster() {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    Settings.System.putFloat(getContentResolver(), Settings.System.ANIMATOR_DURATION_SCALE, 0.0f);
-                    Settings.System.putFloat(getContentResolver(), Settings.System.WINDOW_ANIMATION_SCALE, 0.0f);
-                    Settings.System.putFloat(getContentResolver(), Settings.System.TRANSITION_ANIMATION_SCALE, 0.0f);
-                }
-
-                // FORCE 144 FPS
-                runShellCommand("settings put global peak_refresh_rate 144.0");
-                runShellCommand("settings put global min_refresh_rate 144.0");
-                runShellCommand("settings put global refresh_rate_mode 2");
-                runShellCommand("settings put system peak_refresh_rate 144.0");
-                runShellCommand("settings put system min_refresh_rate 144.0");
-
-                showToast("⚡ Real FPS Booster 144Hz AKTIF!");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal FPS Booster");
-            }
-        }
-
-        private void stopFPSBooster() {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    Settings.System.putFloat(getContentResolver(), Settings.System.ANIMATOR_DURATION_SCALE, 1.0f);
-                    Settings.System.putFloat(getContentResolver(), Settings.System.WINDOW_ANIMATION_SCALE, 1.0f);
-                    Settings.System.putFloat(getContentResolver(), Settings.System.TRANSITION_ANIMATION_SCALE, 1.0f);
-                }
-
-                // RESET FPS
-                runShellCommand("settings delete global peak_refresh_rate");
-                runShellCommand("settings delete global min_refresh_rate");
-                runShellCommand("settings delete system peak_refresh_rate");
-                runShellCommand("settings delete system min_refresh_rate");
-
-                showToast("⚡ FPS Booster NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal FPS Booster");
-            }
-        }
-
-        private void startResBooster() {
-            showToast("📱 Lag Fix AKTIF");
-        }
-
-        private void stopResBooster() {
-            showToast("📱 Lag Fix NONAKTIF");
-        }
-
-        private void startModeBooster() {
-            try {
-                SharedPreferences prefs = getSharedPreferences("GamingModePrefs", MODE_PRIVATE);
-                prefs.edit().putBoolean("gaming_mode_active", true).apply();
-
-                if (!isNotificationServiceEnabled()) {
-                    showToast("⚠️ Aktifkan Izin Akses Notifikasi!");
-                    Intent intent = new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS");
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                } else {
-                    showToast("🎮 Gaming Mode & Real Notif Blocker AKTIF");
-                }
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Gaming Mode");
-            }
-        }
-
-        private void stopModeBooster() {
-            try {
-                SharedPreferences prefs = getSharedPreferences("GamingModePrefs", MODE_PRIVATE);
-                prefs.edit().putBoolean("gaming_mode_active", false).apply();
-                showToast("🎮 Gaming Mode NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Gaming Mode");
-            }
-        }
-
-        private boolean isNotificationServiceEnabled() {
-            String pkgName = getPackageName();
-            final String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
-            if (flat != null && !flat.isEmpty()) {
-                final String[] names = flat.split(":");
-                for (String name : names) {
-                    final android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(name);
-                    if (cn != null && pkgName.equals(cn.getPackageName())) {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        private void startNetworkBooster() {
-            try {
-                ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    Network[] networks = cm.getAllNetworks();
-                    for (Network network : networks) {
-                        cm.bindProcessToNetwork(network);
-                        break;
-                    }
-                }
-                showToast("📶 Network Booster AKTIF!");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Network Booster");
-            }
-        }
-
-        private void stopNetworkBooster() {
-            try {
-                ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    cm.bindProcessToNetwork(null);
-                }
-                showToast("📶 Network Booster NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Network Booster");
-            }
-        }
-
-        private void startRAMBooster() {
-            System.gc();
-            System.runFinalization();
-            showToast("🧠 RAM Booster AKTIF!");
-        }
-
-        private void stopRAMBooster() {
-            showToast("🧠 RAM Booster NONAKTIF");
-        }
-
-        // ========================================
-        // SHIZUKU ONLY
-        // ========================================
         @JavascriptInterface
         public void openShizuku() {
             handler.post(new Runnable() {
@@ -392,7 +165,6 @@ public class MainActivity extends Activity {
             JSONObject status = new JSONObject();
             try {
                 boolean adbEnabled = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
-                status.put("wireless", false); // Disabled
 
                 boolean shizukuInstalled = false;
                 try {
