@@ -32,7 +32,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-// Import Shizuku
+// Import Shizuku API
 import moe.shizuku.api.Shizuku;
 
 public class MainActivity extends Activity {
@@ -59,7 +59,7 @@ public class MainActivity extends Activity {
         createNotificationChannel();
         requestAllPermissions();
 
-        // Setup WebView
+        // Setup WebView configuration
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setLoadWithOverviewMode(true);
@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
 
         webView.setWebChromeClient(new WebChromeClient());
 
-        // Listen for Shizuku permission result using anonymous class
+        // Handle Shizuku permission results
         Shizuku.addRequestPermissionResultListener(new Shizuku.OnRequestPermissionResultListener() {
             @Override
             public void onRequestPermissionResult(int requestCode, int grantResult) {
@@ -165,59 +165,60 @@ public class MainActivity extends Activity {
             // Gunakan Shizuku.pingBinder() untuk cek apakah service aktif
             return Shizuku.pingBinder();
         } catch (Exception e) {
-            // Jika error maka Shizuku tidak aktif
+            // Jika terjadi error, Shizuku dianggap tidak aktif
             return false;
         }
     }
 
-    // 2. Fungsi utama untuk copy file
+    // 2. Fungsi utama untuk copy file (Paste Config)
     private void pasteFile() {
-        // a. Cek Shizuku aktif
+        // a. Cek apakah Shizuku aktif
         if (!isShizukuRunning()) {
             showToast("Shizuku is not running!");
             updateStatusText("Shizuku: Not Running");
             return;
         }
 
-        // Cek permission Shizuku, jika belum ada minta permission
+        // Cek izin Shizuku, minta jika belum ada
         if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
             Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE);
             return;
         }
 
-        // b. Cek file sumber di /sdcard/Download/localconfig.json
+        // b. Cek file sumber di Download
         final String sourcePath = "/sdcard/Download/localconfig.json";
         File sourceFile = new File(sourcePath);
         if (!sourceFile.exists()) {
             showToast("Source file not found: " + sourcePath);
-            updateStatusText("Error: Source file missing");
+            updateStatusText("Error: Source missing");
             return;
         }
 
-        // c. Folder tujuan /data/data/com.dtsfreefireth/files/
-        final String targetDir = "/data/data/com.dtsfreefireth/files/";
+        // c. Tentukan folder tujuan (com.dts.freefireth)
+        final String targetDir = "/data/data/com.dts.freefireth/files/";
 
-        // d. Jalankan perintah copy via Shizuku shell command execution
-        handler.post(new Runnable() {
+        // d. Eksekusi perintah copy via Shizuku shell
+        // Menjalankan di thread terpisah agar tidak freeze UI
+        new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    updateStatusText("Copying file...");
+                    updateStatusText("Processing paste config...");
 
-                    // Pastikan folder tujuan ada dengan mkdir -p
+                    // Buat folder tujuan jika belum ada
                     String mkdirCmd = "mkdir -p " + targetDir;
                     executeShizukuCommand(mkdirCmd);
 
-                    // Jalankan perintah copy: cp source target
+                    // Salin file menggunakan perintah cp
                     String cpCmd = "cp " + sourcePath + " " + targetDir;
                     int exitCode = executeShizukuCommand(cpCmd);
 
-                    // e. Tampilkan Toast dan update TextView status
+                    // e. Tampilkan feedback hasil
                     if (exitCode == 0) {
-                        showToast("✅ File pasted successfully!");
-                        updateStatusText("Success: File copied to target folder");
+                        showToast("✅ Paste Config Berhasil!");
+                        updateStatusText("Success: Config applied to FF");
 
-                        // f. Jika sukses, panggil finish() setelah delay
+                        // f. Tutup aplikasi setelah sukses
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -225,29 +226,26 @@ public class MainActivity extends Activity {
                             }
                         }, 2000);
                     } else {
-                        showToast("❌ Failed to paste file. Exit code: " + exitCode);
-                        updateStatusText("Error: Command failed with exit code " + exitCode);
+                        showToast("❌ Gagal Paste Config. Code: " + exitCode);
+                        updateStatusText("Error: Command failed (" + exitCode + ")");
                     }
-                } catch (Exception e) {
-                    // Tangkap exception jika proses eksekusi gagal
-                    showToast("⚠️ Exception: " + e.getMessage());
+                } catch (final Exception e) {
+                    showToast("⚠️ Terjadi kesalahan sistem!");
                     updateStatusText("Exception: " + e.getMessage());
                 }
             }
-        });
+        }).start();
     }
 
-    // 3. Cara eksekusi perintah via Shizuku menggunakan newProcess
+    // 3. Eksekusi shell command menggunakan Shizuku.newProcess
     private int executeShizukuCommand(String command) throws Exception {
-        // Setup arguments untuk shell
         String[] args = new String[]{"sh", "-c", command};
-        // Jalankan perintah via Shizuku
         Process process = Shizuku.newProcess(args, null, null);
 
-        // Tunggu proses selesai dan tangkap return code
+        // Tunggu hingga perintah selesai dijalankan
         int exitCode = process.waitFor();
 
-        // Tutup semua streams untuk mencegah memory leak
+        // Bersihkan streams
         process.getInputStream().close();
         process.getErrorStream().close();
         process.getOutputStream().close();
@@ -266,7 +264,7 @@ public class MainActivity extends Activity {
     }
 
     // ========================================
-    // WEB APP INTERFACE
+    // WEB APP INTERFACE (JavaScript bridge)
     // ========================================
     class WebAppInterface {
 
@@ -275,7 +273,7 @@ public class MainActivity extends Activity {
             handler.post(new Runnable() {
 					@Override
 					public void run() {
-						Toast.makeText(MainActivity.this, "✅ JavaScript terhubung!", Toast.LENGTH_SHORT).show();
+						Toast.makeText(MainActivity.this, "✅ JavaScript Terhubung!", Toast.LENGTH_SHORT).show();
 					}
 				});
         }
@@ -305,7 +303,6 @@ public class MainActivity extends Activity {
                 });
         }
 
-        // Interface untuk memanggil fungsi pasteFile dari WebView
         @JavascriptInterface
         public void pasteFile() {
             MainActivity.this.pasteFile();
@@ -326,7 +323,6 @@ public class MainActivity extends Activity {
                 }
                 status.put("shizuku_installed", shizukuInstalled);
 
-                // Panggil isShizukuRunning()
                 boolean shizukuRunning = isShizukuRunning();
                 status.put("shizuku", shizukuRunning);
                 status.put("usb_debug", adbEnabled);
