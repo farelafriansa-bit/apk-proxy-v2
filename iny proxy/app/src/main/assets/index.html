@@ -11,7 +11,6 @@
     <!-- FLOATING STATUS -->
     <div class="debug-status-float">
 	  <div class="status-pill off" id="floatShizuku">SHIZUKU: OFF</div>
-	  <div class="status-pill off" id="floatWireless">WIRELESS: OFF</div>
     </div>
 
     <!-- HEADER -->
@@ -175,43 +174,12 @@
 		</div>
 	  </div>
 
-	  <div class="menu-item" onclick="openWirelessSettings()">
-		<div class="menu-info">
-		  <span class="menu-title">Wireless</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status scan" id="statusWireless">SET</span>
-		</div>
-	  </div>
-
 	  <div class="menu-item" onclick="openShizuku()">
 		<div class="menu-info">
 		  <span class="menu-title">Shizuku</span>
 		</div>
 		<div class="menu-right">
 		  <span class="menu-status scan" id="statusShizuku">SET</span>
-		</div>
-	  </div>
-
-	  <!-- Wireless Debug Client -->
-	  <div class="menu-item" onclick="startWirelessDebugging()">
-		<div class="menu-info">
-		  <span class="menu-title">📡 Wireless Debug</span>
-		  <span class="menu-desc">Pairing dengan APK</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status scan" id="statusWirelessDebug">PAIR</span>
-		</div>
-	  </div>
-
-	  <!-- Pairing Code -->
-	  <div class="menu-item" onclick="showFloatingPairing()">
-		<div class="menu-info">
-		  <span class="menu-title">🔑 Pairing Code</span>
-		  <span class="menu-desc">Floating input</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status scan" id="statusFloatingPair">PAIR</span>
 		</div>
 	  </div>
 

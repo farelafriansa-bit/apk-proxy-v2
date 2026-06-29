@@ -46,12 +46,6 @@
     <!-- IZIN UNTUK MENDENGARKAN NOTIFIKASI -->
     <uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
 
-	<!-- Izin untuk Wireless Debugging -->
-	<uses-permission android:name="android.permission.INTERNET" />
-	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-	<uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
-
     <application
         android:allowBackup="true"
         android:icon="@drawable/icon_apk"
@@ -85,12 +79,6 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
-
-        <receiver android:name=".PairingReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="com.whatsap.whatunban.ACTION_PAIRING_CODE" />
-            </intent-filter>
-        </receiver>
 
     </application>
 

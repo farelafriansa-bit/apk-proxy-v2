@@ -5,7 +5,6 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.app.RemoteInput;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.content.Context;
@@ -43,7 +42,6 @@ public class MainActivity extends Activity {
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "debug_channel";
-    private static final int PAIRING_NOTIFICATION_ID = 102;
     private static final int PERMISSION_REQUEST_CODE = 123;
     private static final int OVERLAY_PERMISSION_REQUEST = 124;
 
@@ -136,8 +134,8 @@ public class MainActivity extends Activity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Debugging Notifications";
-            String description = "Notifications for Wireless Debugging and Pairing";
+            CharSequence name = "Booster Notifications";
+            String description = "Notifications for Gaming Mode and Booster";
             int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
@@ -239,7 +237,7 @@ public class MainActivity extends Activity {
                     Settings.System.putFloat(getContentResolver(), Settings.System.TRANSITION_ANIMATION_SCALE, 0.0f);
                 }
 
-                // FORCE 144 FPS (REAL COMMANDS)
+                // FORCE 144 FPS
                 runShellCommand("settings put global peak_refresh_rate 144.0");
                 runShellCommand("settings put global min_refresh_rate 144.0");
                 runShellCommand("settings put global refresh_rate_mode 2");
@@ -362,32 +360,8 @@ public class MainActivity extends Activity {
         }
 
         // ========================================
-        // WIRELESS DEBUGGING & SHIZUKU
+        // SHIZUKU ONLY
         // ========================================
-        @JavascriptInterface
-        public void openWirelessDebugging() {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Intent intent = new Intent("android.settings.ADB_WIFI_SETTINGS");
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            Toast.makeText(MainActivity.this, "📶 Membuka Debugging Nirkabel...", Toast.LENGTH_SHORT).show();
-                        } catch (Exception e) {
-                            try {
-                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                                Toast.makeText(MainActivity.this, "📶 Buka Opsi Developer > Debugging Nirkabel", Toast.LENGTH_SHORT).show();
-                            } catch (Exception e2) {
-                                Toast.makeText(MainActivity.this, "⚠️ Gagal membuka pengaturan!", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    }
-                });
-        }
-
         @JavascriptInterface
         public void openShizuku() {
             handler.post(new Runnable() {
@@ -418,11 +392,7 @@ public class MainActivity extends Activity {
             JSONObject status = new JSONObject();
             try {
                 boolean adbEnabled = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
-                boolean wirelessEnabled = false;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                    wirelessEnabled = Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) > 0;
-                }
-                status.put("wireless", wirelessEnabled || adbEnabled);
+                status.put("wireless", false); // Disabled
 
                 boolean shizukuInstalled = false;
                 try {
@@ -435,7 +405,6 @@ public class MainActivity extends Activity {
 
                 boolean shizukuRunning = false;
                 if (shizukuInstalled) {
-                    // Optimized check for Shizuku
                     String[] commands = {"getprop moe.shizuku.privileged.api", "ps -A", "ps"};
                     for (String cmd : commands) {
                         Process p = Runtime.getRuntime().exec(cmd);
@@ -458,74 +427,6 @@ public class MainActivity extends Activity {
                 e.printStackTrace();
             }
             return status.toString();
-        }
-
-        @JavascriptInterface
-        public void showPairingNotification() {
-            handler.post(new Runnable() {
-					@Override
-					public void run() {
-						try {
-							Intent settingsIntent = new Intent("android.settings.ADB_WIFI_SETTINGS");
-							PendingIntent settingsPending = PendingIntent.getActivity(
-								MainActivity.this, 1, settingsIntent,
-								PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? 0x04000000 : 0)); // FLAG_IMMUTABLE
-
-                            Intent receiverIntent = new Intent(MainActivity.this, PairingReceiver.class);
-                            receiverIntent.setAction(PairingReceiver.ACTION_PAIRING_CODE);
-                            PendingIntent receiverPending = PendingIntent.getBroadcast(
-                                MainActivity.this, 2, receiverIntent,
-                                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 31 ? 0x02000000 : 0)); // FLAG_MUTABLE
-
-                            RemoteInput remoteInput = new RemoteInput.Builder(PairingReceiver.KEY_TEXT_REPLY)
-                                .setLabel("Masukkan Kode Pairing 6 Digit")
-                                .build();
-
-							Notification.Builder builder;
-							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-								builder = new Notification.Builder(MainActivity.this, CHANNEL_ID);
-							} else {
-								builder = new Notification.Builder(MainActivity.this);
-							}
-
-							builder.setSmallIcon(android.R.drawable.ic_dialog_info)
-                                .setContentTitle("🔑 Pairing Wireless Debugging")
-                                .setContentText("Masukkan 6 digit kode pairing di sini")
-                                .setContentIntent(settingsPending)
-                                .setAutoCancel(false)
-                                .setOngoing(true)
-                                .setPriority(Notification.PRIORITY_MAX);
-
-							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                Notification.Action action = new Notification.Action.Builder(
-                                    android.R.drawable.ic_menu_edit, "🔑 Kirim Kode", receiverPending)
-                                    .addRemoteInput(remoteInput)
-                                    .build();
-                                builder.addAction(action);
-							}
-
-                            builder.addAction(android.R.drawable.ic_menu_manage, "⚙️ Buka", settingsPending);
-
-							NotificationManager nm = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-							if (nm != null) {
-								nm.notify(PAIRING_NOTIFICATION_ID, builder.build());
-								showToast("🔔 Gunakan kolom notifikasi untuk isi kode pairing!");
-							}
-						} catch (Exception e) {
-							showToast("⚠️ Gagal mengirim notifikasi!");
-						}
-					}
-				});
-        }
-
-        private String getLocalIpAddress() {
-            try {
-                InetAddress[] addresses = InetAddress.getAllByName(InetAddress.getLocalHost().getHostName());
-                for (InetAddress addr : addresses) {
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) return addr.getHostAddress();
-                }
-            } catch (Exception e) {}
-            return "127.0.0.1";
         }
 
         @JavascriptInterface

@@ -75,67 +75,14 @@ function getBoosterName(type) {
 }
 
 // ========================================
-// WIRELESS DEBUGGING FUNCTIONS
+// SHIZUKU FUNCTIONS
 // ========================================
-function openWirelessSettings() {
-    showToast('📶 Membuka Wireless Debugging...');
-    try {
-        if (typeof Android !== 'undefined') {
-            Android.openWirelessDebugging();
-            Android.showPairingNotification();
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
 function openShizuku() {
     showToast('🔓 Membuka Shizuku...');
     try {
         if (typeof Android !== 'undefined') {
             Android.openShizuku();
             setTimeout(function() { updateStatus(); }, 3000);
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
-function showFloatingPairing() {
-    showToast('🔑 Membuka Floating Pairing...');
-    try {
-        if (typeof Android !== 'undefined') {
-            Android.showFloatingPairing();
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
-function startWirelessDebugging() {
-    showToast('📡 Memulai Wireless Debugging...');
-    try {
-        if (typeof Android !== 'undefined') {
-            Android.startWirelessDebugging();
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
-function getPairingInfo() {
-    try {
-        if (typeof Android !== 'undefined') {
-            var info = JSON.parse(Android.getPairingInfo());
-            showToast('📡 IP: ' + info.ip + ':' + info.port);
         } else {
             showToast('❌ Android tidak tersedia!');
         }
@@ -151,27 +98,16 @@ function updateStatus() {
     try {
         var status = JSON.parse(Android.checkDebugStatus());
         var shizukuEl = document.getElementById('floatShizuku');
-        var wirelessEl = document.getElementById('floatWireless');
         var shizukuMenu = document.getElementById('statusShizuku');
-        var wirelessMenu = document.getElementById('statusWireless');
 
         if (shizukuEl) {
             shizukuEl.textContent = status.shizuku ? 'SHIZUKU: ON' : 'SHIZUKU: OFF';
             shizukuEl.className = 'status-pill ' + (status.shizuku ? 'on' : 'off');
         }
-        if (wirelessEl) {
-            wirelessEl.textContent = status.wireless ? 'WIRELESS: ON' : 'WIRELESS: OFF';
-            wirelessEl.className = 'status-pill ' + (status.wireless ? 'on' : 'off');
-        }
         if (shizukuMenu) {
             shizukuMenu.textContent = status.shizuku ? 'ON' : 'OFF';
             shizukuMenu.style.background = status.shizuku ? '#2ecc71' : '#9b59b6';
             shizukuMenu.style.color = '#fff';
-        }
-        if (wirelessMenu) {
-            wirelessMenu.textContent = status.wireless ? 'ON' : 'OFF';
-            wirelessMenu.style.background = status.wireless ? '#2ecc71' : '#3498db';
-            wirelessMenu.style.color = '#fff';
         }
     } catch(e) {
         console.log('Gagal update status:', e);
