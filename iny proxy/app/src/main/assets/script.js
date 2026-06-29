@@ -149,6 +149,58 @@ function refreshUserGames() {
 }
 
 // ========================================
+// FORCE 144 FPS
+// ========================================
+function force144FPS() {
+    showToast('🚀 Memaksa 144 FPS...');
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.force144FPS();
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
+// NOTIFICATION BLOCKER
+// ========================================
+function toggleNotifBlocker(enabled) {
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.setNotificationBlocker(enabled);
+            // Re-sync UI state after short delay
+            setTimeout(function() {
+                var actualEnabled = Android.isNotificationBlockerEnabled();
+                document.getElementById('notifBlockerSwitch').checked = actualEnabled;
+            }, 1000);
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
+// WIRELESS PAIRING
+// ========================================
+function showPairingPopup() {
+    showToast('📶 Mengirim notifikasi pairing...');
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.showPairingPopup();
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
 // START GAME
 // ========================================
 function startGame() {
@@ -194,4 +246,13 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStatus();
     refreshUserGames();
     testConnection();
+
+    // Sync initial state of notification blocker
+    try {
+        if (typeof Android !== 'undefined') {
+            var enabled = Android.isNotificationBlockerEnabled();
+            var sw = document.getElementById('notifBlockerSwitch');
+            if (sw) sw.checked = enabled;
+        }
+    } catch(e) {}
 });

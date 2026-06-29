@@ -1,8 +1,11 @@
 package com.whatsap.whatunban;
 
 import android.app.Activity;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.RemoteInput;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.content.Context;
@@ -33,7 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Import Shizuku API
-import moe.shizuku.api.Shizuku;
+import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
     private WebView webView;
@@ -41,6 +44,8 @@ public class MainActivity extends Activity {
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "debug_channel";
+    private static final String PREFS_NAME = "GameSettings";
+    private static final String KEY_BLOCK_NOTIF = "block_notifications";
     private static final int PERMISSION_REQUEST_CODE = 123;
     private static final int OVERLAY_PERMISSION_REQUEST = 124;
     private static final int SHIZUKU_PERMISSION_REQUEST_CODE = 1000;
@@ -237,7 +242,108 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // 3. Eksekusi shell command menggunakan Shizuku.newProcess
+    // 3. Force 144 FPS
+    private void force144FPS() {
+        if (!isShizukuRunning()) {
+            showToast("Shizuku is not running!");
+            return;
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    executeShizukuCommand("settings put global peak_refresh_rate 144.0");
+                    executeShizukuCommand("settings put global min_refresh_rate 144.0");
+                    executeShizukuCommand("settings put global user_refresh_rate 144");
+                    showToast("🚀 144 FPS Forced!");
+                } catch (Exception e) {
+                    showToast("⚠️ Gagal force 144 FPS");
+                }
+            }
+        }).start();
+    }
+
+    // 4. Toggle Notification Blocker
+    private void setNotificationBlockerEnabled(boolean enabled) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_BLOCK_NOTIF, enabled)
+            .apply();
+
+        if (enabled && !isNotificationServiceEnabled()) {
+            showToast("Silakan aktifkan izin Akses Notifikasi");
+            try {
+                startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+            } catch (Exception e) {
+                showToast("Gagal membuka pengaturan");
+            }
+        } else {
+            showToast("Notification Blocker: " + (enabled ? "ON" : "OFF"));
+        }
+    }
+
+    private boolean isNotificationServiceEnabled() {
+        String pkgName = getPackageName();
+        String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        if (flat != null && !flat.isEmpty()) {
+            String[] names = flat.split(":");
+            for (int i = 0; i < names.length; i++) {
+                android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(names[i]);
+                if (cn != null) {
+                    if (android.text.TextUtils.equals(pkgName, cn.getPackageName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // 5. Wireless Debugging Pairing Notification
+    private void showPairingNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            String replyLabel = "Masukkan Pairing Code";
+            RemoteInput remoteInput = new RemoteInput.Builder(PairingReceiver.EXTRA_TEXT_REPLY)
+                .setLabel(replyLabel)
+                .build();
+
+            Intent intent = new Intent(this, PairingReceiver.class);
+            intent.setAction(PairingReceiver.ACTION_PAIR);
+
+            // SDK 29 context, using FLAG_UPDATE_CURRENT
+            // PendingIntent.FLAG_MUTABLE (0x02000000) is for SDK 31+, but we are targeting 29.
+            // On SDK 29, intents are mutable by default unless FLAG_IMMUTABLE is used.
+            PendingIntent replyPendingIntent = PendingIntent.getBroadcast(
+                getApplicationContext(),
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
+            Notification.Action action = new Notification.Action.Builder(
+                android.R.drawable.ic_menu_send,
+                "Pairing",
+                replyPendingIntent
+            ).addRemoteInput(remoteInput).build();
+
+            Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .setContentTitle("Wireless Debugging")
+                .setContentText("Tap untuk memasukkan pairing code")
+                .setAutoCancel(true)
+                .addAction(action);
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.notify(1, builder.build());
+            }
+        } else {
+            showToast("Fitur ini membutuhkan Android Nougat ke atas");
+        }
+    }
+
+    // 6. Eksekusi shell command menggunakan Shizuku.newProcess
     private int executeShizukuCommand(String command) throws Exception {
         String[] args = new String[]{"sh", "-c", command};
         Process process = Shizuku.newProcess(args, null, null);
@@ -276,6 +382,16 @@ public class MainActivity extends Activity {
 						Toast.makeText(MainActivity.this, "✅ JavaScript Terhubung!", Toast.LENGTH_SHORT).show();
 					}
 				});
+        }
+
+        @JavascriptInterface
+        public void showPairingPopup() {
+            MainActivity.this.showPairingNotification();
+        }
+
+        @JavascriptInterface
+        public void force144FPS() {
+            MainActivity.this.force144FPS();
         }
 
         @JavascriptInterface
@@ -523,6 +639,16 @@ public class MainActivity extends Activity {
                         showToast("📋 Text disalin: " + text);
                     }
                 });
+        }
+
+        @JavascriptInterface
+        public void setNotificationBlocker(boolean enabled) {
+            MainActivity.this.setNotificationBlockerEnabled(enabled);
+        }
+
+        @JavascriptInterface
+        public boolean isNotificationBlockerEnabled() {
+            return getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_BLOCK_NOTIF, false);
         }
 
         @JavascriptInterface

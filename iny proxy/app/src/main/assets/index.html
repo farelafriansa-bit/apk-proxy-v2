@@ -62,6 +62,42 @@
 		</div>
 	  </div>
 
+	  <!-- FORCE 144 FPS -->
+	  <div class="menu-item" onclick="force144FPS()">
+		<div class="menu-info">
+		  <span class="menu-title">🚀 Force 144 FPS</span>
+		  <span class="menu-desc">Paksa refresh rate ke 144Hz</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status on" style="background:#3498db">BOOST</span>
+		</div>
+	  </div>
+
+	  <!-- NOTIFICATION BLOCKER -->
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">🚫 Block Notification</span>
+		  <span class="menu-desc">Blokir WA, SMS, Telepon saat main</span>
+		</div>
+		<div class="menu-right">
+		  <label class="switch">
+			<input type="checkbox" id="notifBlockerSwitch" onchange="toggleNotifBlocker(this.checked)">
+			<span class="slider round"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <!-- WIRELESS PAIRING -->
+	  <div class="menu-item" onclick="showPairingPopup()">
+		<div class="menu-info">
+		  <span class="menu-title">📶 Wireless Pairing</span>
+		  <span class="menu-desc">Input pairing code via notifikasi</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status on" style="background:#f1c40f">PAIR</span>
+		</div>
+	  </div>
+
 	  <!-- TAMBAH GAME -->
 	  <div class="menu-item full-width" onclick="openAddGameModal()" style="margin-top:15px;background:#f0f9ff;border-color:#3498db;">
 		<div class="menu-info">
