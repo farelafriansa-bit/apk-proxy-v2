@@ -36,7 +36,4 @@ android {
 
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
-    // Shizuku API
-    implementation 'dev.rikka.shizuku:api:12.1.0'
-    implementation 'dev.rikka.shizuku:provider:12.1.0'
 }

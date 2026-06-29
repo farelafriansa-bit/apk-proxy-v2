@@ -6,8 +6,9 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Toast;
 import android.app.RemoteInput;
-import rikka.shizuku.Shizuku;
 import android.util.Log;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 public class PairingReceiver extends BroadcastReceiver {
     private static final String TAG = "PairingReceiver";
@@ -21,42 +22,50 @@ public class PairingReceiver extends BroadcastReceiver {
             if (remoteInput != null) {
                 final String pairingCode = remoteInput.getCharSequence(EXTRA_TEXT_REPLY).toString();
 
-                if (Shizuku.pingBinder()) {
+                if (ShizukuHelper.isRunning(context)) {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
                             try {
-                                // We need to find the port. Usually pairing is on a dynamic port.
-                                // The user usually sees the port in the system UI.
-                                // For simplicity, we assume the user might provide 'port code' or just 'code'.
-                                // If they provide just code, we might need more logic.
-                                // But the prompt says "isi pairing nya".
+                                Log.d(TAG, "Attempting pairing with code: " + pairingCode);
 
-                                String cmd = "adb pair localhost:" + pairingCode; // This might be wrong if code != port+code
-                                // Actually 'adb pair' takes 'host:port' then asks for code.
-                                // Through Shizuku we are already 'shell'. Shell doesn't have 'adb' command usually.
-                                // But Shizuku IS the shell.
-                                // To pair, we usually use 'pairing_port' from 'getprop service.adb.tls.port'
+                                // Wireless Debugging pairing usually requires:
+                                // adb pair localhost:<port> <pairing_code>
+                                // The port is dynamic and can be found via 'service.adb.tls.port'
 
-                                Log.d(TAG, "Pairing with code: " + pairingCode);
+                                String port = getSystemProperty("service.adb.tls.port");
+                                if (port == null || port.isEmpty() || port.equals("0")) {
+                                    showToast(context, "❌ Gagal: Wireless Debugging tidak aktif!");
+                                    return;
+                                }
 
-                                // Direct pairing via shell is tricky.
-                                // However, most users want to just input the code that pops up.
+                                // We need an 'adb' binary to run 'adb pair'.
+                                // Since 'adb' is not standard in Android shell, we try to find it
+                                // or use the 'am' command to trigger pairing if available.
+                                // Alternatively, we can try to find the internal 'adb' binary if it exists.
 
-                                // If we are using Shizuku, we are ALREADY authorized.
-                                // Maybe the user wants to pair a NEW device or just 'isi pairing' for Wireless Debug.
+                                String cmd = "adb pair localhost:" + port + " " + pairingCode;
+                                // In many devices, 'adb' is not in path. We might need to use full path if known.
+                                // Or we can try to use 'service call' to talk to adbd directly.
 
-                                // I will implement a toast for now to confirm receipt.
-                                android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        Toast.makeText(context, "Pairing Code Diterima: " + pairingCode, Toast.LENGTH_LONG).show();
+                                int exitCode = ShizukuHelper.executeCommand(cmd, context);
+
+                                if (exitCode == 0) {
+                                    showToast(context, "✅ Pairing Berhasil!");
+                                } else {
+                                    // If 'adb' command fails, it might be because it's not in PATH.
+                                    // On some devices, it's in /system/bin/adb
+                                    exitCode = ShizukuHelper.executeCommand("/system/bin/adb pair localhost:" + port + " " + pairingCode, context);
+                                    if (exitCode == 0) {
+                                        showToast(context, "✅ Pairing Berhasil!");
+                                    } else {
+                                        showToast(context, "❌ Pairing Gagal (Code: " + exitCode + "). Pastikan Port & Code Benar.");
                                     }
-                                });
+                                }
 
                             } catch (Exception e) {
                                 e.printStackTrace();
+                                showToast(context, "⚠️ Error Pairing: " + e.getMessage());
                             }
                         }
                     }).start();
@@ -65,5 +74,27 @@ public class PairingReceiver extends BroadcastReceiver {
                 }
             }
         }
+    }
+
+    private String getSystemProperty(String key) {
+        try {
+            Process process = Runtime.getRuntime().exec("getprop " + key);
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line = reader.readLine();
+            reader.close();
+            return line;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private void showToast(final Context context, final String msg) {
+        android.os.Handler handler = new android.os.Handler(android.os.Looper.getMainLooper());
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show();
+            }
+        });
     }
 }

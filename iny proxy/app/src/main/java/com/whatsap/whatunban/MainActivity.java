@@ -35,9 +35,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-// Import Shizuku API
-import rikka.shizuku.Shizuku;
-
 public class MainActivity extends Activity {
     private WebView webView;
     private TextView statusText;
@@ -90,20 +87,6 @@ public class MainActivity extends Activity {
             });
 
         webView.setWebChromeClient(new WebChromeClient());
-
-        // Handle Shizuku permission results
-        Shizuku.addRequestPermissionResultListener(new Shizuku.OnRequestPermissionResultListener() {
-            @Override
-            public void onRequestPermissionResult(int requestCode, int grantResult) {
-                if (requestCode == SHIZUKU_PERMISSION_REQUEST_CODE) {
-                    if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                        updateStatusText("Shizuku: Permission Granted");
-                    } else {
-                        updateStatusText("Shizuku: Permission Denied");
-                    }
-                }
-            }
-        });
     }
 
     private void requestAllPermissions() {
@@ -164,33 +147,22 @@ public class MainActivity extends Activity {
     // SHIZUKU CORE METHODS
     // ========================================
 
-    // 1. Fungsi untuk mengecek apakah Shizuku sedang berjalan
     private boolean isShizukuRunning() {
-        try {
-            // Gunakan Shizuku.pingBinder() untuk cek apakah service aktif
-            return Shizuku.pingBinder();
-        } catch (Exception e) {
-            // Jika terjadi error, Shizuku dianggap tidak aktif
-            return false;
-        }
+        return ShizukuHelper.isRunning(this);
     }
 
-    // 2. Fungsi utama untuk copy file (Paste Config)
     private void pasteFile() {
-        // a. Cek apakah Shizuku aktif
         if (!isShizukuRunning()) {
             showToast("Shizuku is not running!");
             updateStatusText("Shizuku: Not Running");
             return;
         }
 
-        // Cek izin Shizuku, minta jika belum ada
-        if (Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-            Shizuku.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE);
+        if (!ShizukuHelper.checkSelfPermission(this)) {
+            ShizukuHelper.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE, this);
             return;
         }
 
-        // b. Cek file sumber di Download
         final String sourcePath = "/sdcard/Download/localconfig.json";
         File sourceFile = new File(sourcePath);
         if (!sourceFile.exists()) {
@@ -199,31 +171,20 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // c. Tentukan folder tujuan (com.dts.freefireth)
         final String targetDir = "/data/data/com.dts.freefireth/files/";
 
-        // d. Eksekusi perintah copy via Shizuku shell
-        // Menjalankan di thread terpisah agar tidak freeze UI
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
                     updateStatusText("Processing paste config...");
+                    ShizukuHelper.executeCommand("mkdir -p " + targetDir, MainActivity.this);
+                    int exitCode = ShizukuHelper.executeCommand("cp " + sourcePath + " " + targetDir, MainActivity.this);
 
-                    // Buat folder tujuan jika belum ada
-                    String mkdirCmd = "mkdir -p " + targetDir;
-                    executeShizukuCommand(mkdirCmd);
-
-                    // Salin file menggunakan perintah cp
-                    String cpCmd = "cp " + sourcePath + " " + targetDir;
-                    int exitCode = executeShizukuCommand(cpCmd);
-
-                    // e. Tampilkan feedback hasil
                     if (exitCode == 0) {
                         showToast("✅ Paste Config Berhasil!");
                         updateStatusText("Success: Config applied to FF");
 
-                        // f. Tutup aplikasi setelah sukses
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
@@ -242,7 +203,6 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // 3. Force 144 FPS
     private void force144FPS() {
         if (!isShizukuRunning()) {
             showToast("Shizuku is not running!");
@@ -253,9 +213,9 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 try {
-                    executeShizukuCommand("settings put global peak_refresh_rate 144.0");
-                    executeShizukuCommand("settings put global min_refresh_rate 144.0");
-                    executeShizukuCommand("settings put global user_refresh_rate 144");
+                    ShizukuHelper.executeCommand("settings put global peak_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put global min_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put global user_refresh_rate 144", MainActivity.this);
                     showToast("🚀 144 FPS Forced!");
                 } catch (Exception e) {
                     showToast("⚠️ Gagal force 144 FPS");
@@ -264,7 +224,6 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    // 4. Toggle Notification Blocker
     private void setNotificationBlockerEnabled(boolean enabled) {
         getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
             .edit()
@@ -300,7 +259,6 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    // 5. Wireless Debugging Pairing Notification
     private void showPairingNotification() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             String replyLabel = "Masukkan Pairing Code";
@@ -311,9 +269,6 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(this, PairingReceiver.class);
             intent.setAction(PairingReceiver.ACTION_PAIR);
 
-            // SDK 29 context, using FLAG_UPDATE_CURRENT
-            // PendingIntent.FLAG_MUTABLE (0x02000000) is for SDK 31+, but we are targeting 29.
-            // On SDK 29, intents are mutable by default unless FLAG_IMMUTABLE is used.
             PendingIntent replyPendingIntent = PendingIntent.getBroadcast(
                 getApplicationContext(),
                 0,
@@ -341,23 +296,6 @@ public class MainActivity extends Activity {
         } else {
             showToast("Fitur ini membutuhkan Android Nougat ke atas");
         }
-    }
-
-    // 6. Eksekusi shell command menggunakan Shizuku.newProcess
-    private int executeShizukuCommand(String command) throws Exception {
-        String[] args = new String[]{"sh", "-c", command};
-        Process process = Shizuku.newProcess(args, null, null);
-
-        // Tunggu hingga perintah selesai dijalankan
-        int exitCode = process.waitFor();
-
-        // Bersihkan streams
-        process.getInputStream().close();
-        process.getErrorStream().close();
-        process.getOutputStream().close();
-        process.destroy();
-
-        return exitCode;
     }
 
     private void showToast(final String msg) {
