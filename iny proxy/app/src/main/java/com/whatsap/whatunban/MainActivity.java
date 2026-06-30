@@ -52,41 +52,51 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        try {
+            setContentView(R.layout.activity_main);
 
-        // Bind UI components
-        statusText = (TextView) findViewById(R.id.statusText);
-        webView = (WebView) findViewById(R.id.webView);
+            // Bind UI components
+            statusText = (TextView) findViewById(R.id.statusText);
+            webView = (WebView) findViewById(R.id.webView);
 
-        createNotificationChannel();
-        requestAllPermissions();
+            if (webView == null) {
+                Toast.makeText(this, "Critical Error: WebView not found", Toast.LENGTH_LONG).show();
+                return;
+            }
 
-        // Setup WebView configuration
-        webView.getSettings().setJavaScriptEnabled(true);
-        webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setLoadWithOverviewMode(true);
-        webView.getSettings().setUseWideViewPort(true);
-        webView.getSettings().setAllowFileAccess(true);
-        webView.getSettings().setAllowContentAccess(true);
+            createNotificationChannel();
+            requestAllPermissions();
 
-        webView.addJavascriptInterface(new WebAppInterface(), "Android");
+            // Setup WebView configuration
+            webView.getSettings().setJavaScriptEnabled(true);
+            webView.getSettings().setDomStorageEnabled(true);
+            webView.getSettings().setLoadWithOverviewMode(true);
+            webView.getSettings().setUseWideViewPort(true);
+            webView.getSettings().setAllowFileAccess(true);
+            webView.getSettings().setAllowContentAccess(true);
 
-        webView.loadUrl("file:///android_asset/login.html");
+            webView.addJavascriptInterface(new WebAppInterface(), "Android");
 
-        webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    super.onPageFinished(view, url);
-                }
+            webView.loadUrl("file:///android_asset/login.html");
 
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                    view.loadUrl(url);
-                    return true;
-                }
-            });
+            webView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        super.onPageFinished(view, url);
+                    }
 
-        webView.setWebChromeClient(new WebChromeClient());
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        view.loadUrl(url);
+                        return true;
+                    }
+                });
+
+            webView.setWebChromeClient(new WebChromeClient());
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.util.Log.e("MainActivity", "Error in onCreate", e);
+        }
     }
 
     private void requestAllPermissions() {
@@ -319,7 +329,7 @@ public class MainActivity extends Activity {
     // ========================================
     // WEB APP INTERFACE (JavaScript bridge)
     // ========================================
-    class WebAppInterface {
+    public class WebAppInterface {
 
         @JavascriptInterface
         public void testConnection() {

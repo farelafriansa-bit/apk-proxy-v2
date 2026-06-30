@@ -21,10 +21,12 @@ public class ShizukuHelper {
     public static synchronized IShizukuService getService(final Context context) {
         if (sService != null) {
             try {
-                if (sService.asBinder().isBinderAlive()) {
+                IBinder binder = sService.asBinder();
+                if (binder != null && binder.isBinderAlive() && binder.pingBinder()) {
                     return sService;
                 }
             } catch (Exception ignored) {}
+            sService = null;
         }
 
         try {
@@ -33,6 +35,7 @@ public class ShizukuHelper {
             if (bundle != null) {
                 IBinder binder = bundle.getBinder("binder");
                 if (binder == null) {
+                    // Try alternative key used in some versions
                     binder = bundle.getBinder("moe.shizuku.privileged.api.intent.extra.BINDER");
                 }
 
@@ -44,9 +47,6 @@ public class ShizukuHelper {
         } catch (Exception e) {
             android.util.Log.e("ShizukuHelper", "getService call failed", e);
         }
-
-        // Second attempt: Direct Binder retrieval via Binder object in bundle (if any other method exists)
-        // Shizuku V11+ usually responds to 'getBinder' but visibility is the main blocker.
 
         return null;
     }

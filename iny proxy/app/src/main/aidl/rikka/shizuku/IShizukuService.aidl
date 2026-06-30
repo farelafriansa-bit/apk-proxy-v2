@@ -1,8 +1,6 @@
 package rikka.shizuku;
 
 import rikka.shizuku.IRemoteProcess;
-import android.content.Intent;
-import android.os.Bundle;
 
 interface IShizukuService {
 

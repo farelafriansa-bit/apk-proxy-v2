@@ -93,7 +93,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".GlobalApplication$CrashActivity" />
+        <activity android:name=".CrashActivity" />
 
     </application>
 
