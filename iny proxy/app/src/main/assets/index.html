@@ -11,7 +11,6 @@
     <!-- FLOATING STATUS -->
     <div class="debug-status-float">
 	  <div class="status-pill off" id="floatShizuku">SHIZUKU: OFF</div>
-	  <div class="status-pill off" id="floatWireless">WIRELESS: OFF</div>
     </div>
 
     <!-- HEADER -->
@@ -28,200 +27,94 @@
     <div class="app-banner-wrapper">
 	  <div class="app-banner">
 		<span class="app-name">INY PROXY</span>
-		<span class="app-sub">Menu</span>
+		<span class="app-sub">Debugging</span>
 	  </div>
     </div>
 
     <!-- MENU LIST -->
     <div class="menu-list">
 
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">aim body</span>
-		  <span class="menu-desc">body headshot</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusBody">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleBody" onchange="toggleMenu('body', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">aim lock</span>
-		  <span class="menu-desc">head lock</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusLock">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleLock" onchange="toggleMenu('lock', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">speed up</span>
-		  <span class="menu-desc">move speed</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusSpeed">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleSpeed" onchange="toggleMenu('speed', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">back jump</span>
-		  <span class="menu-desc">old style</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusJump">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleJump" onchange="toggleMenu('jump', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">bypass</span>
-		  <span class="menu-desc">anti ban</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusBypass">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleBypass" onchange="toggleMenu('bypass', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">refresh</span>
-		  <span class="menu-desc">auto refresh</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusRefresh">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleRefresh" onchange="toggleMenu('refresh', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <!-- GAME BOOSTER -->
-	  <div class="menu-item full-width" style="background:#f0fdf4;border-color:#1a7a4a;margin-top:5px;">
-		<div class="menu-info">
-		  <span class="menu-title" style="color:#1a7a4a;">Game Booster</span>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">Max FPS</span>
-		  <span class="menu-desc">144Hz</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusFps">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleFps" onchange="toggleBooster('fps', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">Lag Fix</span>
-		  <span class="menu-desc">720p</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusRes">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleRes" onchange="toggleBooster('res', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
-	  <div class="menu-item">
-		<div class="menu-info">
-		  <span class="menu-title">Gaming Mode</span>
-		  <span class="menu-desc">Silent</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status off" id="statusMode">OFF</span>
-		  <label class="switch">
-			<input type="checkbox" id="toggleMode" onchange="toggleBooster('mode', this.checked)">
-			<span class="slider"></span>
-		  </label>
-		</div>
-	  </div>
-
 	  <!-- DEBUGGING SETTINGS -->
-	  <div class="menu-item full-width" style="background:#fdf2f2;border-color:#e74c3c;">
+	  <div class="menu-item full-width" style="background:#fdf2f2;border-color:#e74c3c;margin-top:10px;">
 		<div class="menu-info">
-		  <span class="menu-title" style="color:#c0392b;">Debugging</span>
-		</div>
-	  </div>
-
-	  <div class="menu-item" onclick="openWirelessSettings()">
-		<div class="menu-info">
-		  <span class="menu-title">Wireless</span>
-		</div>
-		<div class="menu-right">
-		  <span class="menu-status scan" id="statusWireless">SET</span>
+		  <span class="menu-title" style="color:#c0392b;">Service Status</span>
 		</div>
 	  </div>
 
 	  <div class="menu-item" onclick="openShizuku()">
 		<div class="menu-info">
-		  <span class="menu-title">Shizuku</span>
+		  <span class="menu-title">Shizuku Service</span>
+		  <span class="menu-desc">Buka aplikasi Shizuku</span>
 		</div>
 		<div class="menu-right">
 		  <span class="menu-status scan" id="statusShizuku">SET</span>
 		</div>
 	  </div>
 
-	  <!-- Wireless Debug Client -->
-	  <div class="menu-item" onclick="startWirelessDebugging()">
+	  <div class="menu-item" onclick="testShizuku()">
 		<div class="menu-info">
-		  <span class="menu-title">📡 Wireless Debug</span>
-		  <span class="menu-desc">Pairing dengan APK</span>
+		  <span class="menu-title">🔍 Diagnostic Shizuku</span>
+		  <span class="menu-desc">Cek detail koneksi Shizuku</span>
 		</div>
 		<div class="menu-right">
-		  <span class="menu-status scan" id="statusWirelessDebug">PAIR</span>
+		  <span class="menu-status on" style="background:#95a5a6">TEST</span>
 		</div>
 	  </div>
 
-	  <!-- Pairing Code -->
-	  <div class="menu-item" onclick="showFloatingPairing()">
+	  <!-- PASTE FILE CONFIG -->
+	  <div class="menu-item" onclick="pasteFile()">
 		<div class="menu-info">
-		  <span class="menu-title">🔑 Pairing Code</span>
-		  <span class="menu-desc">Floating input</span>
+		  <span class="menu-title">📋 Paste Config</span>
+		  <span class="menu-desc">Copy localconfig to FF files</span>
 		</div>
 		<div class="menu-right">
-		  <span class="menu-status scan" id="statusFloatingPair">PAIR</span>
+		  <span class="menu-status on" style="background:#e67e22">PASTE</span>
+		</div>
+	  </div>
+
+	  <!-- FORCE 144 FPS -->
+	  <div class="menu-item" onclick="force144FPS()">
+		<div class="menu-info">
+		  <span class="menu-title">🚀 Force 144 FPS</span>
+		  <span class="menu-desc">Paksa refresh rate ke 144Hz</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status on" style="background:#3498db">BOOST</span>
+		</div>
+	  </div>
+
+	  <!-- NOTIFICATION BLOCKER -->
+	  <div class="menu-item">
+		<div class="menu-info">
+		  <span class="menu-title">🚫 Block Notification</span>
+		  <span class="menu-desc">Blokir WA, SMS, Telepon saat main</span>
+		</div>
+		<div class="menu-right">
+		  <label class="switch">
+			<input type="checkbox" id="notifBlockerSwitch" onchange="toggleNotifBlocker(this.checked)">
+			<span class="slider round"></span>
+		  </label>
+		</div>
+	  </div>
+
+	  <!-- WIRELESS PAIRING -->
+	  <div class="menu-item" onclick="showPairingPopup()">
+		<div class="menu-info">
+		  <span class="menu-title">📶 Wireless Pairing</span>
+		  <span class="menu-desc">Input pairing code via notifikasi</span>
+		</div>
+		<div class="menu-right">
+		  <span class="menu-status on" style="background:#f1c40f">PAIR</span>
 		</div>
 	  </div>
 
 	  <!-- TAMBAH GAME -->
-	  <div class="menu-item full-width" onclick="openAddGameModal()" style="margin-top:5px;">
+	  <div class="menu-item full-width" onclick="openAddGameModal()" style="margin-top:15px;background:#f0f9ff;border-color:#3498db;">
 		<div class="menu-info">
-		  <span class="menu-title">Tambah Game</span>
+		  <span class="menu-title" style="color:#2980b9;">📥 Tambah Game Debug</span>
 		</div>
 		<div class="menu-right">
-		  <span class="menu-status scan" id="statusAddGame">ADD</span>
+		  <span class="menu-status on" id="statusAddGame">ADD</span>
 		</div>
 	  </div>
 
@@ -231,7 +124,7 @@
     <div class="game-section-wrapper">
 	  <div class="game-section-header">
 		<div class="game-section-title">
-		  <span class="title-text">Game Saya</span>
+		  <span class="title-text">Game Terdaftar</span>
 		  <span class="title-badge" id="gameCount">0</span>
 		</div>
 		<div class="game-section-action">
@@ -249,7 +142,7 @@
 
     <!-- START GAME -->
     <div class="start-container">
-	  <button class="btn-start" onclick="startGame()">🎮 START GAME</button>
+	  <button class="btn-start" onclick="startGame()">🎮 LANJUTKAN</button>
     </div>
 
     <!-- FOOTER -->

@@ -1,18 +1,18 @@
 package com.whatsap.whatunban;
 
 import android.app.Activity;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.RemoteInput;
 import android.content.ClipboardManager;
 import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
-import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -24,77 +24,83 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Toast;
-import android.app.Notification;
-import android.app.PendingIntent;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.net.Inet4Address;
-import java.net.InetAddress;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private TextView statusText;
     private Handler handler = new Handler(Looper.getMainLooper());
 
     private static final String CHANNEL_ID = "debug_channel";
-    private static final int NOTIFICATION_ID = 101;
-    private static final int PAIRING_NOTIFICATION_ID = 102;
+    private static final String PREFS_NAME = "GameSettings";
+    private static final String KEY_BLOCK_NOTIF = "block_notifications";
     private static final int PERMISSION_REQUEST_CODE = 123;
     private static final int OVERLAY_PERMISSION_REQUEST = 124;
+    private static final int SHIZUKU_PERMISSION_REQUEST_CODE = 1000;
 
     private List<String> userGameList = java.util.Collections.synchronizedList(new ArrayList<String>());
-
-    private boolean isAutoBody = false;
-    private boolean isAutoLock = false;
-    private boolean isAutoSpeed = false;
-    private boolean isAutoJump = false;
-    private boolean isAutoBypass = false;
-    private boolean isAutoRefresh = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        try {
+            setContentView(R.layout.activity_main);
 
-        createNotificationChannel();
-        requestAllPermissions();
+            // Bind UI components
+            statusText = (TextView) findViewById(R.id.statusText);
+            webView = (WebView) findViewById(R.id.webView);
 
-        webView = (WebView) findViewById(R.id.webView);
+            if (webView == null) {
+                Toast.makeText(this, "Critical Error: WebView not found", Toast.LENGTH_LONG).show();
+                return;
+            }
 
-        webView.getSettings().setJavaScriptEnabled(true);
-        webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setLoadWithOverviewMode(true);
-        webView.getSettings().setUseWideViewPort(true);
-        webView.getSettings().setAllowFileAccess(true);
-        webView.getSettings().setAllowContentAccess(true);
+            createNotificationChannel();
+            requestAllPermissions();
 
-        webView.addJavascriptInterface(new WebAppInterface(), "Android");
+            // Setup WebView configuration
+            webView.getSettings().setJavaScriptEnabled(true);
+            webView.getSettings().setDomStorageEnabled(true);
+            webView.getSettings().setLoadWithOverviewMode(true);
+            webView.getSettings().setUseWideViewPort(true);
+            webView.getSettings().setAllowFileAccess(true);
+            webView.getSettings().setAllowContentAccess(true);
 
-        webView.loadUrl("file:///android_asset/login.html");
+            webView.addJavascriptInterface(new WebAppInterface(), "Android");
 
-        webView.setWebViewClient(new WebViewClient() {
-                @Override
-                public void onPageFinished(WebView view, String url) {
-                    super.onPageFinished(view, url);
-                }
+            webView.loadUrl("file:///android_asset/login.html");
 
-                @Override
-                public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                    view.loadUrl(url);
-                    return true;
-                }
-            });
+            webView.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public void onPageFinished(WebView view, String url) {
+                        super.onPageFinished(view, url);
+                    }
 
-        webView.setWebChromeClient(new WebChromeClient());
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                        view.loadUrl(url);
+                        return true;
+                    }
+                });
+
+            webView.setWebChromeClient(new WebChromeClient());
+        } catch (Exception e) {
+            e.printStackTrace();
+            android.util.Log.e("MainActivity", "Error in onCreate", e);
+        }
     }
 
     private void requestAllPermissions() {
-        List<String> permissions = new ArrayList<>();
+        List<String> permissions = new ArrayList<String>();
 
         if (Build.VERSION.SDK_INT >= 33) {
             if (checkSelfPermission("android.permission.POST_NOTIFICATIONS") != PackageManager.PERMISSION_GRANTED) {
@@ -124,8 +130,8 @@ public class MainActivity extends Activity {
 
     private void createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = "Debugging Notifications";
-            String description = "Notifications for Wireless Debugging and Pairing";
+            CharSequence name = "Debug Notifications";
+            String description = "Notifications for Shizuku and Debugging";
             int importance = NotificationManager.IMPORTANCE_HIGH;
             NotificationChannel channel = new NotificationChannel(CHANNEL_ID, name, importance);
             channel.setDescription(description);
@@ -136,248 +142,228 @@ public class MainActivity extends Activity {
         }
     }
 
-    // ========================================
-    // WEB APP INTERFACE
-    // ========================================
-    class WebAppInterface {
+    private void updateStatusText(final String text) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (statusText != null) {
+                    statusText.setText("Status: " + text);
+                }
+            }
+        });
+    }
 
-        // ========================================
-        // TEST CONNECTION
-        // ========================================
+    // ========================================
+    // SHIZUKU CORE METHODS
+    // ========================================
+
+    private boolean isShizukuRunning() {
+        return ShizukuHelper.isRunning(this);
+    }
+
+    private void pasteFile() {
+        if (!isShizukuRunning()) {
+            showToast("Shizuku is not running!");
+            updateStatusText("Shizuku: Not Running");
+            return;
+        }
+
+        if (!ShizukuHelper.checkSelfPermission(this)) {
+            ShizukuHelper.requestPermission(SHIZUKU_PERMISSION_REQUEST_CODE, this);
+            return;
+        }
+
+        final String sourcePath = "/sdcard/Download/localconfig.json";
+        File sourceFile = new File(sourcePath);
+        if (!sourceFile.exists()) {
+            showToast("Source file not found: " + sourcePath);
+            updateStatusText("Error: Source missing");
+            return;
+        }
+
+        final String targetDir = "/data/data/com.dts.freefireth/files/";
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    updateStatusText("Processing paste config...");
+                    ShizukuHelper.executeCommand("mkdir -p " + targetDir, MainActivity.this);
+                    int exitCode = ShizukuHelper.executeCommand("cp " + sourcePath + " " + targetDir, MainActivity.this);
+
+                    if (exitCode == 0) {
+                        showToast("✅ Paste Config Berhasil!");
+                        updateStatusText("Success: Config applied to FF");
+
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                finish();
+                            }
+                        }, 2000);
+                    } else {
+                        showToast("❌ Gagal Paste Config. Code: " + exitCode);
+                        updateStatusText("Error: Command failed (" + exitCode + ")");
+                    }
+                } catch (final Exception e) {
+                    showToast("⚠️ Terjadi kesalahan sistem!");
+                    updateStatusText("Exception: " + e.getMessage());
+                }
+            }
+        }).start();
+    }
+
+    private void force144FPS() {
+        if (!isShizukuRunning()) {
+            showToast("Shizuku is not running!");
+            return;
+        }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    updateStatusText("Forcing 144 FPS...");
+                    // Try different ways to force refresh rate
+                    ShizukuHelper.executeCommand("settings put global peak_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put global min_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put global user_refresh_rate 144", MainActivity.this);
+
+                    // Fallback for some devices (oneplus/oppo/realme)
+                    ShizukuHelper.executeCommand("settings put system peak_refresh_rate 144.0", MainActivity.this);
+                    ShizukuHelper.executeCommand("settings put system min_refresh_rate 144.0", MainActivity.this);
+
+                    showToast("🚀 144 FPS Boosted! (Pastikan layar mendukung)");
+                    updateStatusText("Shizuku: Active (FPS Boosted)");
+                } catch (Exception e) {
+                    showToast("⚠️ Gagal force 144 FPS via Shizuku");
+                    updateStatusText("Error: FPS Boost failed");
+                }
+            }
+        }).start();
+    }
+
+    private void setNotificationBlockerEnabled(boolean enabled) {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_BLOCK_NOTIF, enabled)
+            .apply();
+
+        if (enabled && !isNotificationServiceEnabled()) {
+            showToast("Silakan aktifkan izin Akses Notifikasi");
+            try {
+                startActivity(new Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"));
+            } catch (Exception e) {
+                showToast("Gagal membuka pengaturan");
+            }
+        } else {
+            showToast("Notification Blocker: " + (enabled ? "ON" : "OFF"));
+        }
+    }
+
+    private boolean isNotificationServiceEnabled() {
+        String pkgName = getPackageName();
+        String flat = Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        if (flat != null && !flat.isEmpty()) {
+            String[] names = flat.split(":");
+            for (int i = 0; i < names.length; i++) {
+                android.content.ComponentName cn = android.content.ComponentName.unflattenFromString(names[i]);
+                if (cn != null) {
+                    if (android.text.TextUtils.equals(pkgName, cn.getPackageName())) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private void showPairingNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            String replyLabel = "Masukkan Pairing Code";
+            RemoteInput remoteInput = new RemoteInput.Builder(PairingReceiver.EXTRA_TEXT_REPLY)
+                .setLabel(replyLabel)
+                .build();
+
+            Intent intent = new Intent(this, PairingReceiver.class);
+            intent.setAction(PairingReceiver.ACTION_PAIR);
+
+            PendingIntent replyPendingIntent = PendingIntent.getBroadcast(
+                getApplicationContext(),
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+            );
+
+            Notification.Action action = new Notification.Action.Builder(
+                android.R.drawable.ic_menu_send,
+                "Pairing",
+                replyPendingIntent
+            ).addRemoteInput(remoteInput).build();
+
+            Notification.Builder builder = new Notification.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_notify_sync)
+                .setContentTitle("Wireless Debugging")
+                .setContentText("Tap untuk memasukkan pairing code")
+                .setAutoCancel(true)
+                .addAction(action);
+
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (notificationManager != null) {
+                notificationManager.notify(1, builder.build());
+            }
+        } else {
+            showToast("Fitur ini membutuhkan Android Nougat ke atas");
+        }
+    }
+
+    private void showToast(final String msg) {
+        handler.post(new Runnable() {
+            @Override
+            public void run() {
+                Toast.makeText(MainActivity.this, msg, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    // ========================================
+    // WEB APP INTERFACE (JavaScript bridge)
+    // ========================================
+    public class WebAppInterface {
+
         @JavascriptInterface
         public void testConnection() {
             handler.post(new Runnable() {
 					@Override
 					public void run() {
-						Toast.makeText(MainActivity.this, "✅ JavaScript terhubung!", Toast.LENGTH_SHORT).show();
+						Toast.makeText(MainActivity.this, "✅ JavaScript Terhubung!", Toast.LENGTH_SHORT).show();
 					}
 				});
         }
 
         @JavascriptInterface
-        public void executeCommand(final String menu, final String action) {
+        public void testShizukuConnection() {
+            final String diagnostic = ShizukuHelper.getDiagnostics(MainActivity.this);
             handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (menu.equals("body")) {
-                            isAutoBody = action.equals("start");
-                            showToast("aim body: " + (isAutoBody ? "ON" : "OFF"));
-                        } else if (menu.equals("lock")) {
-                            isAutoLock = action.equals("start");
-                            showToast("aim lock: " + (isAutoLock ? "ON" : "OFF"));
-                        } else if (menu.equals("speed")) {
-                            isAutoSpeed = action.equals("start");
-                            showToast("speed up: " + (isAutoSpeed ? "ON" : "OFF"));
-                        } else if (menu.equals("jump")) {
-                            isAutoJump = action.equals("start");
-                            showToast("back jump: " + (isAutoJump ? "ON" : "OFF"));
-                        } else if (menu.equals("bypass")) {
-                            isAutoBypass = action.equals("start");
-                            showToast("bypass: " + (isAutoBypass ? "ON" : "OFF"));
-                        } else if (menu.equals("refresh")) {
-                            isAutoRefresh = action.equals("start");
-                            showToast("auto refresh: " + (isAutoRefresh ? "ON" : "OFF"));
-                        }
-                    }
-                });
+                @Override
+                public void run() {
+                    new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Diagnostic Shizuku")
+                        .setMessage(diagnostic)
+                        .setPositiveButton("OK", null)
+                        .show();
+                }
+            });
         }
 
-        // ========================================
-        // BOOSTER FUNCTIONS
-        // ========================================
         @JavascriptInterface
-        public void executeBooster(final String type, final String action) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (type.equals("fps")) {
-                            if (action.equals("start")) {
-                                startFPSBooster();
-                            } else {
-                                stopFPSBooster();
-                            }
-                        } else if (type.equals("res")) {
-                            if (action.equals("start")) {
-                                startResBooster();
-                            } else {
-                                stopResBooster();
-                            }
-                        } else if (type.equals("mode")) {
-                            if (action.equals("start")) {
-                                startModeBooster();
-                            } else {
-                                stopModeBooster();
-                            }
-                        } else if (type.equals("network")) {
-                            if (action.equals("start")) {
-                                startNetworkBooster();
-                            } else {
-                                stopNetworkBooster();
-                            }
-                        } else if (type.equals("ram")) {
-                            if (action.equals("start")) {
-                                startRAMBooster();
-                            } else {
-                                stopRAMBooster();
-                            }
-                        }
-                    }
-                });
+        public void showPairingPopup() {
+            MainActivity.this.showPairingNotification();
         }
 
-        private void startFPSBooster() {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.ANIMATOR_DURATION_SCALE,
-                        0.0f
-                    );
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.WINDOW_ANIMATION_SCALE,
-                        0.0f
-                    );
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.TRANSITION_ANIMATION_SCALE,
-                        0.0f
-                    );
-                }
-                showToast("⚡ FPS Booster AKTIF!");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal FPS Booster");
-            }
-        }
-
-        private void stopFPSBooster() {
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.ANIMATOR_DURATION_SCALE,
-                        1.0f
-                    );
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.WINDOW_ANIMATION_SCALE,
-                        1.0f
-                    );
-                    Settings.System.putFloat(
-                        getContentResolver(),
-                        Settings.System.TRANSITION_ANIMATION_SCALE,
-                        1.0f
-                    );
-                }
-                showToast("⚡ FPS Booster NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal FPS Booster");
-            }
-        }
-
-        private void startResBooster() {
-            try {
-                showToast("📱 Lag Fix AKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Lag Fix");
-            }
-        }
-
-        private void stopResBooster() {
-            try {
-                showToast("📱 Lag Fix NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Lag Fix");
-            }
-        }
-
-        private void startModeBooster() {
-            try {
-                showToast("🎮 Gaming Mode AKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Gaming Mode");
-            }
-        }
-
-        private void stopModeBooster() {
-            try {
-                showToast("🎮 Gaming Mode NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Gaming Mode");
-            }
-        }
-
-        private void startNetworkBooster() {
-            try {
-                ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    Network[] networks = cm.getAllNetworks();
-                    for (Network network : networks) {
-                        cm.bindProcessToNetwork(network);
-                        break;
-                    }
-                }
-                showToast("📶 Network Booster AKTIF!");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Network Booster");
-            }
-        }
-
-        private void stopNetworkBooster() {
-            try {
-                ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    cm.bindProcessToNetwork(null);
-                }
-                showToast("📶 Network Booster NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal Network Booster");
-            }
-        }
-
-        private void startRAMBooster() {
-            try {
-                System.gc();
-                System.runFinalization();
-                showToast("🧠 RAM Booster AKTIF!");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal RAM Booster");
-            }
-        }
-
-        private void stopRAMBooster() {
-            try {
-                showToast("🧠 RAM Booster NONAKTIF");
-            } catch (Exception e) {
-                showToast("⚠️ Gagal RAM Booster");
-            }
-        }
-
-        // ========================================
-        // WIRELESS DEBUGGING & SHIZUKU
-        // ========================================
         @JavascriptInterface
-        public void openWirelessDebugging() {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Intent intent = new Intent("android.settings.ADB_WIFI_SETTINGS");
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            Toast.makeText(MainActivity.this, "📶 Membuka Debugging Nirkabel...", Toast.LENGTH_SHORT).show();
-                        } catch (Exception e) {
-                            try {
-                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS);
-                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
-                                Toast.makeText(MainActivity.this, "📶 Buka Opsi Developer > Debugging Nirkabel", Toast.LENGTH_SHORT).show();
-                            } catch (Exception e2) {
-                                Toast.makeText(MainActivity.this, "⚠️ Gagal membuka pengaturan!", Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    }
-                });
+        public void force144FPS() {
+            MainActivity.this.force144FPS();
         }
 
         @JavascriptInterface
@@ -406,427 +392,57 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void pasteFile() {
+            MainActivity.this.pasteFile();
+        }
+
+        @JavascriptInterface
         public String checkDebugStatus() {
             JSONObject status = new JSONObject();
             try {
                 boolean adbEnabled = false;
-                boolean wirelessEnabled = false;
-
                 try {
                     adbEnabled = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                        wirelessEnabled = Settings.Global.getInt(getContentResolver(), "adb_wifi_enabled", 0) > 0;
-                    } else {
-                        wirelessEnabled = adbEnabled;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                status.put("wireless", wirelessEnabled || adbEnabled);
+                } catch (Exception ignored) {}
 
                 boolean shizukuInstalled = false;
-                boolean shizukuRunning = false;
-                boolean shizukuApi = false;
-
                 try {
                     getPackageManager().getApplicationInfo("moe.shizuku.privileged.api", 0);
                     shizukuInstalled = true;
                 } catch (PackageManager.NameNotFoundException e) {
                     shizukuInstalled = false;
                 }
-
-                if (shizukuInstalled) {
-                    try {
-                        Process process = Runtime.getRuntime().exec("getprop moe.shizuku.privileged.api");
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                        String line = reader.readLine();
-                        if (line != null && !line.isEmpty()) {
-                            shizukuRunning = true;
-                            shizukuApi = line.contains("api");
-                        }
-                        process.destroy();
-                    } catch (Exception e) {
-                        try {
-                            Process process2 = Runtime.getRuntime().exec("ps -A | grep shizuku");
-                            BufferedReader reader2 = new BufferedReader(new InputStreamReader(process2.getInputStream()));
-                            String line2 = reader2.readLine();
-                            if (line2 != null && line2.contains("shizuku")) {
-                                shizukuRunning = true;
-                            }
-                            process2.destroy();
-                        } catch (Exception e2) {
-                        }
-                    }
-                }
-
                 status.put("shizuku_installed", shizukuInstalled);
-                status.put("shizuku", shizukuRunning);
-                status.put("shizuku_api", shizukuApi);
 
-                try {
-                    boolean usbDebug = Settings.Global.getInt(getContentResolver(), "adb_enabled", 0) > 0;
-                    status.put("usb_debug", usbDebug);
-                } catch (Exception e) {
-                    status.put("usb_debug", false);
+                boolean shizukuRunning = isShizukuRunning();
+                status.put("shizuku", shizukuRunning);
+                status.put("usb_debug", adbEnabled);
+
+                // Detailed check for UI message
+                if (!shizukuInstalled) {
+                    status.put("message", "Shizuku Belum Terinstall");
+                } else if (!shizukuRunning) {
+                    // Check if it's a permission issue or truly not running
+                    if (ShizukuHelper.getService(MainActivity.this) != null) {
+                         status.put("message", "Shizuku: Belum Diizinkan");
+                    } else {
+                         status.put("message", "Shizuku: Belum Aktif");
+                    }
+                } else {
+                    status.put("message", "Shizuku Aktif");
                 }
 
             } catch (Exception e) {
                 e.printStackTrace();
-                try {
-                    status.put("error", e.getMessage());
-                } catch (Exception e2) {
-                }
             }
             return status.toString();
         }
 
-        // ========================================
-        // PAIRING DIALOG (Popup)
-        // ========================================
         @JavascriptInterface
-        public void showPairingDialog() {
-            handler.post(new Runnable() {
-					@Override
-					public void run() {
-						String ipAddress = getLocalIpAddress();
-
-						android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(MainActivity.this);
-						builder.setTitle("📡 Wireless Debugging Pairing");
-
-						android.widget.LinearLayout layout = new android.widget.LinearLayout(MainActivity.this);
-						layout.setOrientation(android.widget.LinearLayout.VERTICAL);
-						layout.setPadding(30, 20, 30, 20);
-
-						android.widget.TextView ipInfo = new android.widget.TextView(MainActivity.this);
-						ipInfo.setText("📶 IP Address: " + ipAddress);
-						ipInfo.setTextSize(16);
-						ipInfo.setTypeface(null, android.graphics.Typeface.BOLD);
-						ipInfo.setPadding(0, 0, 0, 15);
-						layout.addView(ipInfo);
-
-						android.widget.TextView label = new android.widget.TextView(MainActivity.this);
-						label.setText("Masukkan kode pairing 6 digit dari Wireless Debugging:");
-						label.setTextSize(14);
-						label.setPadding(0, 0, 0, 10);
-						layout.addView(label);
-
-						final android.widget.EditText input = new android.widget.EditText(MainActivity.this);
-						input.setHint("Contoh: 123456");
-						input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-						input.setTextSize(24);
-						input.setGravity(android.view.Gravity.CENTER);
-						input.setPadding(40, 20, 40, 20);
-						input.setBackgroundColor(0xFFF0F0F0);
-						layout.addView(input);
-
-						builder.setView(layout);
-
-						builder.setPositiveButton("🔗 Pairing", new android.content.DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(android.content.DialogInterface dialog, int which) {
-									String code = input.getText().toString().trim();
-									if (!code.isEmpty()) {
-										SharedPreferences prefs = getSharedPreferences("pairing", MODE_PRIVATE);
-										prefs.edit().putString("pairing_code", code).apply();
-
-										ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-										ClipData clip = ClipData.newPlainText("pairing_code", code);
-										clipboard.setPrimaryClip(clip);
-
-										Toast.makeText(MainActivity.this, "🔑 Kode: " + code + " ✅ Tersimpan & di-copy!", Toast.LENGTH_SHORT).show();
-										openWirelessDebugging();
-									} else {
-										Toast.makeText(MainActivity.this, "⚠️ Masukkan kode pairing!", Toast.LENGTH_SHORT).show();
-									}
-								}
-							});
-
-						builder.setNegativeButton("❌ Batal", new android.content.DialogInterface.OnClickListener() {
-								@Override
-								public void onClick(android.content.DialogInterface dialog, int which) {
-									dialog.cancel();
-								}
-							});
-
-						builder.show();
-					}
-				});
+        public void showToast(final String message) {
+            MainActivity.this.showToast(message);
         }
 
-        // ========================================
-        // FLOATING WIDGET PAIRING CODE
-        // ========================================
-        @JavascriptInterface
-        public void showFloatingPairing() {
-            handler.post(new Runnable() {
-					@Override
-					public void run() {
-						if (Build.VERSION.SDK_INT >= 23 && !Settings.canDrawOverlays(MainActivity.this)) {
-							Toast.makeText(MainActivity.this, "⚠️ Izinkan overlay di pengaturan!", Toast.LENGTH_SHORT).show();
-							Intent intent = new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-													   Uri.parse("package:" + getPackageName()));
-							startActivity(intent);
-							return;
-						}
-
-						try {
-							android.widget.FrameLayout.LayoutParams params = new android.widget.FrameLayout.LayoutParams(
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-							);
-							params.gravity = android.view.Gravity.CENTER;
-
-							android.widget.LinearLayout layout = new android.widget.LinearLayout(MainActivity.this);
-							layout.setOrientation(android.widget.LinearLayout.VERTICAL);
-							layout.setBackgroundColor(0xFF1a7a4a);
-							layout.setPadding(35, 30, 35, 30);
-							layout.setElevation(25);
-
-							android.graphics.drawable.GradientDrawable border = new android.graphics.drawable.GradientDrawable();
-							border.setColor(0xFF1a7a4a);
-							border.setStroke(4, 0xFF000000);
-							border.setCornerRadius(20);
-							layout.setBackground(border);
-
-							android.widget.TextView title = new android.widget.TextView(MainActivity.this);
-							title.setText("🔑 Pairing Code");
-							title.setTextColor(0xFFFFFFFF);
-							title.setTextSize(20);
-							title.setTypeface(null, android.graphics.Typeface.BOLD);
-							title.setGravity(android.view.Gravity.CENTER);
-							layout.addView(title);
-
-							final android.widget.EditText input = new android.widget.EditText(MainActivity.this);
-							input.setHint("Masukkan kode pairing");
-							input.setHintTextColor(0xFFAAAAAA);
-							input.setTextColor(0xFFFFFFFF);
-							input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
-							input.setTextSize(24);
-							input.setGravity(android.view.Gravity.CENTER);
-							input.setBackgroundColor(0x44000000);
-							input.setPadding(25, 20, 25, 20);
-							input.setHint("Contoh: 123456");
-							android.widget.FrameLayout.LayoutParams inputParams = new android.widget.FrameLayout.LayoutParams(
-								android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-							);
-							inputParams.setMargins(0, 20, 0, 20);
-							input.setLayoutParams(inputParams);
-							layout.addView(input);
-
-							android.widget.LinearLayout btnLayout = new android.widget.LinearLayout(MainActivity.this);
-							btnLayout.setOrientation(android.widget.LinearLayout.HORIZONTAL);
-							btnLayout.setGravity(android.view.Gravity.CENTER);
-
-							android.widget.Button btnPair = new android.widget.Button(MainActivity.this);
-							btnPair.setText("🔗 Pair");
-							btnPair.setTextColor(0xFFFFFFFF);
-							btnPair.setBackgroundColor(0xFF2ecc71);
-							btnPair.setPadding(30, 14, 30, 14);
-							btnPair.setAllCaps(false);
-							btnPair.setTypeface(null, android.graphics.Typeface.BOLD);
-							android.widget.FrameLayout.LayoutParams btnParams = new android.widget.FrameLayout.LayoutParams(
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
-							);
-							btnParams.setMargins(0, 0, 15, 0);
-							btnPair.setLayoutParams(btnParams);
-
-							android.widget.Button btnClose = new android.widget.Button(MainActivity.this);
-							btnClose.setText("✕ Tutup");
-							btnClose.setTextColor(0xFFFFFFFF);
-							btnClose.setBackgroundColor(0xFFe74c3c);
-							btnClose.setPadding(25, 14, 25, 14);
-							btnClose.setAllCaps(false);
-							btnClose.setTypeface(null, android.graphics.Typeface.BOLD);
-
-							btnLayout.addView(btnPair);
-							btnLayout.addView(btnClose);
-							layout.addView(btnLayout);
-
-							final android.widget.PopupWindow popupWindow = new android.widget.PopupWindow(
-								layout,
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-								android.widget.FrameLayout.LayoutParams.WRAP_CONTENT,
-								true
-							);
-							popupWindow.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-							popupWindow.setOutsideTouchable(true);
-							popupWindow.setFocusable(true);
-
-							popupWindow.showAtLocation(webView, android.view.Gravity.CENTER, 0, 0);
-
-							btnPair.setOnClickListener(new android.view.View.OnClickListener() {
-									@Override
-									public void onClick(android.view.View v) {
-										String code = input.getText().toString().trim();
-										if (!code.isEmpty()) {
-											ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-											ClipData clip = ClipData.newPlainText("pairing_code", code);
-											clipboard.setPrimaryClip(clip);
-											Toast.makeText(MainActivity.this, "🔑 Kode: " + code + " ✅ Sudah di-copy!", Toast.LENGTH_SHORT).show();
-											popupWindow.dismiss();
-											openWirelessDebugging();
-										} else {
-											Toast.makeText(MainActivity.this, "⚠️ Masukkan kode pairing!", Toast.LENGTH_SHORT).show();
-										}
-									}
-								});
-
-							btnClose.setOnClickListener(new android.view.View.OnClickListener() {
-									@Override
-									public void onClick(android.view.View v) {
-										popupWindow.dismiss();
-									}
-								});
-						} catch (Exception e) {
-							Toast.makeText(MainActivity.this, "⚠️ Gagal menampilkan floating widget!", Toast.LENGTH_SHORT).show();
-						}
-					}
-				});
-        }
-
-        // ========================================
-        // NOTIFIKASI PAIRING
-        // ========================================
-        @JavascriptInterface
-        public void showPairingNotification() {
-            handler.post(new Runnable() {
-					@Override
-					public void run() {
-						try {
-							Intent dialogIntent = new Intent(MainActivity.this, MainActivity.class);
-							dialogIntent.setAction("SHOW_PAIRING_DIALOG");
-							PendingIntent dialogPending = PendingIntent.getActivity(
-								MainActivity.this,
-								0,
-								dialogIntent,
-								PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-							);
-
-							Intent settingsIntent = new Intent("android.settings.ADB_WIFI_SETTINGS");
-							PendingIntent settingsPending = PendingIntent.getActivity(
-								MainActivity.this,
-								1,
-								settingsIntent,
-								PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-							);
-
-							Notification.Builder builder;
-							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-								builder = new Notification.Builder(MainActivity.this, CHANNEL_ID);
-							} else {
-								builder = new Notification.Builder(MainActivity.this);
-							}
-
-							builder.setSmallIcon(android.R.drawable.ic_dialog_info)
-                                .setContentTitle("🔑 Pairing Debugging Nirkabel")
-                                .setContentText("Klik untuk memasukkan kode pairing")
-                                .setContentIntent(dialogPending)
-                                .setAutoCancel(true)
-                                .setPriority(Notification.PRIORITY_MAX);
-
-							if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-								builder.addAction(
-									android.R.drawable.ic_menu_manage,
-									"⚙️ Buka Pengaturan",
-									settingsPending
-								);
-								builder.addAction(
-									android.R.drawable.ic_menu_edit,
-									"🔑 Masukkan Kode",
-									dialogPending
-								);
-							}
-
-							NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-							if (notificationManager != null) {
-								notificationManager.notify(PAIRING_NOTIFICATION_ID, builder.build());
-								Toast.makeText(MainActivity.this, "🔔 Notifikasi pairing telah dikirim!", Toast.LENGTH_SHORT).show();
-							}
-						} catch (Exception e) {
-							Toast.makeText(MainActivity.this, "⚠️ Gagal mengirim notifikasi!", Toast.LENGTH_SHORT).show();
-						}
-					}
-				});
-        }
-
-        // ========================================
-        // START WIRELESS DEBUGGING CLIENT
-        // ========================================
-        @JavascriptInterface
-        public void startWirelessDebugging() {
-            handler.post(new Runnable() {
-					@Override
-					public void run() {
-						if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-							Toast.makeText(MainActivity.this, "⚠️ Wireless Debugging hanya untuk Android 11+", Toast.LENGTH_SHORT).show();
-							return;
-						}
-
-						try {
-							Intent intent = new Intent("android.settings.ADB_WIFI_SETTINGS");
-							intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-							startActivity(intent);
-							showPairingDialog();
-							Toast.makeText(MainActivity.this, "📡 Wireless Debugging siap pairing!", Toast.LENGTH_SHORT).show();
-						} catch (Exception e) {
-							Toast.makeText(MainActivity.this, "⚠️ Gagal membuka Wireless Debugging!", Toast.LENGTH_SHORT).show();
-						}
-					}
-				});
-        }
-
-        // ========================================
-        // GET PAIRING INFO
-        // ========================================
-        @JavascriptInterface
-        public String getPairingInfo() {
-            JSONObject info = new JSONObject();
-            try {
-                String ip = getLocalIpAddress();
-                int port = getAdbPort();
-                info.put("ip", ip);
-                info.put("port", port);
-                info.put("status", "siap pairing");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return info.toString();
-        }
-
-        private String getLocalIpAddress() {
-            try {
-                InetAddress[] addresses = InetAddress.getAllByName(InetAddress.getLocalHost().getHostName());
-                for (InetAddress addr : addresses) {
-                    if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
-                        return addr.getHostAddress();
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return "Tidak terdeteksi";
-        }
-
-        private int getAdbPort() {
-            try {
-                Process process = Runtime.getRuntime().exec("getprop service.adb.tcp.port");
-                BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-                String line = reader.readLine();
-                process.destroy();
-                if (line != null && !line.isEmpty()) {
-                    return Integer.parseInt(line);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return 5555;
-        }
-
-        // ========================================
-        // GAME FUNCTIONS
-        // ========================================
         @JavascriptInterface
         public String scanAllGames() {
             JSONArray gamesArray = new JSONArray();
@@ -1002,16 +618,6 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void showToast(final String message) {
-            handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
-                });
-        }
-
-        @JavascriptInterface
         public void copyToClipboard(final String text) {
             handler.post(new Runnable() {
                     @Override
@@ -1022,6 +628,16 @@ public class MainActivity extends Activity {
                         showToast("📋 Text disalin: " + text);
                     }
                 });
+        }
+
+        @JavascriptInterface
+        public void setNotificationBlocker(boolean enabled) {
+            MainActivity.this.setNotificationBlockerEnabled(enabled);
+        }
+
+        @JavascriptInterface
+        public boolean isNotificationBlockerEnabled() {
+            return getSharedPreferences(PREFS_NAME, MODE_PRIVATE).getBoolean(KEY_BLOCK_NOTIF, false);
         }
 
         @JavascriptInterface

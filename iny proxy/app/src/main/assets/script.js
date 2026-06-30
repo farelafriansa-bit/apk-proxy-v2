@@ -15,76 +15,14 @@ function testConnection() {
 }
 
 // ========================================
-// TOGGLE MENU
+// SHIZUKU FUNCTIONS
 // ========================================
-const menuState = {
-    body: false, lock: false, speed: false,
-    jump: false, bypass: false, refresh: false
-};
-
-function getMenuName(menu) {
-    const names = {
-        body: 'aim body', lock: 'aim lock', speed: 'speed up',
-        jump: 'back jump', bypass: 'bypass', refresh: 'auto refres'
-    };
-    return names[menu] || menu;
-}
-
-function toggleMenu(menu, isOn) {
-    menuState[menu] = isOn;
-    var statusId = 'status' + menu.charAt(0).toUpperCase() + menu.slice(1);
-    var statusEl = document.getElementById(statusId);
-    if (isOn) {
-        statusEl.textContent = 'ON';
-        statusEl.className = 'menu-status on';
-        showToast('✅ ' + getMenuName(menu) + ' AKTIF');
-        Android.executeCommand(menu, 'start');
-    } else {
-        statusEl.textContent = 'OFF';
-        statusEl.className = 'menu-status off';
-        showToast('⛔ ' + getMenuName(menu) + ' NONAKTIF');
-        Android.executeCommand(menu, 'stop');
-    }
-}
-
-// ========================================
-// TOGGLE BOOSTER
-// ========================================
-function toggleBooster(type, isOn) {
-    var statusId = 'status' + type.charAt(0).toUpperCase() + type.slice(1);
-    var statusEl = document.getElementById(statusId);
-    if (isOn) {
-        statusEl.textContent = 'ON';
-        statusEl.className = 'menu-status on';
-        Android.executeBooster(type, 'start');
-        showToast('⚡ ' + getBoosterName(type) + ' AKTIF');
-    } else {
-        statusEl.textContent = 'OFF';
-        statusEl.className = 'menu-status off';
-        Android.executeBooster(type, 'stop');
-        showToast('⛔ ' + getBoosterName(type) + ' NONAKTIF');
-    }
-}
-
-function getBoosterName(type) {
-    var names = {
-        fps: 'FPS Booster', res: 'Lag Fix', mode: 'Gaming Mode',
-        network: 'Network Booster', ram: 'RAM Booster'
-    };
-    return names[type] || type;
-}
-
-// ========================================
-// WIRELESS DEBUGGING FUNCTIONS
-// ========================================
-function openWirelessSettings() {
-    showToast('📶 Membuka Wireless Debugging...');
+function testShizuku() {
     try {
-        if (typeof Android !== 'undefined') {
-            Android.openWirelessDebugging();
-            Android.showPairingNotification();
+        if (typeof Android !== 'undefined' && Android.testShizukuConnection) {
+            Android.testShizukuConnection();
         } else {
-            showToast('❌ Android tidak tersedia!');
+            showToast('❌ Fitur diagnostik tidak tersedia!');
         }
     } catch(e) {
         showToast('❌ Error: ' + e.message);
@@ -105,37 +43,14 @@ function openShizuku() {
     }
 }
 
-function showFloatingPairing() {
-    showToast('🔑 Membuka Floating Pairing...');
+// ========================================
+// PASTE FILE FUNCTIONS
+// ========================================
+function pasteFile() {
+    showToast('📋 Melakukan Paste Config...');
     try {
         if (typeof Android !== 'undefined') {
-            Android.showFloatingPairing();
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
-function startWirelessDebugging() {
-    showToast('📡 Memulai Wireless Debugging...');
-    try {
-        if (typeof Android !== 'undefined') {
-            Android.startWirelessDebugging();
-        } else {
-            showToast('❌ Android tidak tersedia!');
-        }
-    } catch(e) {
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
-function getPairingInfo() {
-    try {
-        if (typeof Android !== 'undefined') {
-            var info = JSON.parse(Android.getPairingInfo());
-            showToast('📡 IP: ' + info.ip + ':' + info.port);
+            Android.pasteFile();
         } else {
             showToast('❌ Android tidak tersedia!');
         }
@@ -151,27 +66,16 @@ function updateStatus() {
     try {
         var status = JSON.parse(Android.checkDebugStatus());
         var shizukuEl = document.getElementById('floatShizuku');
-        var wirelessEl = document.getElementById('floatWireless');
         var shizukuMenu = document.getElementById('statusShizuku');
-        var wirelessMenu = document.getElementById('statusWireless');
 
         if (shizukuEl) {
-            shizukuEl.textContent = status.shizuku ? 'SHIZUKU: ON' : 'SHIZUKU: OFF';
+            shizukuEl.textContent = 'SHIZUKU: ' + (status.shizuku ? 'ON' : 'OFF');
             shizukuEl.className = 'status-pill ' + (status.shizuku ? 'on' : 'off');
         }
-        if (wirelessEl) {
-            wirelessEl.textContent = status.wireless ? 'WIRELESS: ON' : 'WIRELESS: OFF';
-            wirelessEl.className = 'status-pill ' + (status.wireless ? 'on' : 'off');
-        }
         if (shizukuMenu) {
-            shizukuMenu.textContent = status.shizuku ? 'ON' : 'OFF';
-            shizukuMenu.style.background = status.shizuku ? '#2ecc71' : '#9b59b6';
+            shizukuMenu.textContent = status.shizuku ? 'ON' : (status.shizuku_installed ? 'START' : 'GET');
+            shizukuMenu.style.background = status.shizuku ? '#2ecc71' : (status.shizuku_installed ? '#f39c12' : '#9b59b6');
             shizukuMenu.style.color = '#fff';
-        }
-        if (wirelessMenu) {
-            wirelessMenu.textContent = status.wireless ? 'ON' : 'OFF';
-            wirelessMenu.style.background = status.wireless ? '#2ecc71' : '#3498db';
-            wirelessMenu.style.color = '#fff';
         }
     } catch(e) {
         console.log('Gagal update status:', e);
@@ -257,28 +161,70 @@ function refreshUserGames() {
 }
 
 // ========================================
+// FORCE 144 FPS
+// ========================================
+function force144FPS() {
+    showToast('🚀 Memaksa 144 FPS...');
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.force144FPS();
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
+// NOTIFICATION BLOCKER
+// ========================================
+function toggleNotifBlocker(enabled) {
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.setNotificationBlocker(enabled);
+            // Re-sync UI state after short delay
+            setTimeout(function() {
+                var actualEnabled = Android.isNotificationBlockerEnabled();
+                document.getElementById('notifBlockerSwitch').checked = actualEnabled;
+            }, 1000);
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
+// WIRELESS PAIRING
+// ========================================
+function showPairingPopup() {
+    showToast('📶 Mengirim notifikasi pairing...');
+    try {
+        if (typeof Android !== 'undefined') {
+            Android.showPairingPopup();
+        } else {
+            showToast('❌ Android tidak tersedia!');
+        }
+    } catch(e) {
+        showToast('❌ Error: ' + e.message);
+    }
+}
+
+// ========================================
 // START GAME
 // ========================================
 function startGame() {
-    var activeMenus = [];
-    for (var key in menuState) {
-        if (menuState[key]) activeMenus.push(getMenuName(key));
-    }
     try {
         var gamesJson = Android.getUserGames();
         var games = JSON.parse(gamesJson);
         if (games.length > 0) {
             var firstGame = games[0];
-            var msg = '🎮 Membuka ' + firstGame.appName;
-            if (activeMenus.length > 0) msg += ' dengan: ' + activeMenus.join(', ');
-            showToast(msg);
+            showToast('🎮 Membuka ' + firstGame.appName);
             Android.openGame(firstGame.packageName);
         } else {
-            if (activeMenus.length > 0) {
-                showToast('🎮 Membuka Free Fire dengan: ' + activeMenus.join(', '));
-            } else {
-                showToast('🎮 Membuka Free Fire...');
-            }
+            showToast('🎮 Membuka Free Fire...');
             Android.openFreeFire();
         }
     } catch(e) {
@@ -312,4 +258,13 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStatus();
     refreshUserGames();
     testConnection();
+
+    // Sync initial state of notification blocker
+    try {
+        if (typeof Android !== 'undefined') {
+            var enabled = Android.isNotificationBlockerEnabled();
+            var sw = document.getElementById('notifBlockerSwitch');
+            if (sw) sw.checked = enabled;
+        }
+    } catch(e) {}
 });
